@@ -80,44 +80,45 @@ jobs:
         if: steps.build.outcome == 'success'
         working-directory: app/ios
         run: |
-          mkdir -p ../../artifacts
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
           ditto -c -k --sequesterRsrc \
             build/Build/Products/Release-iphonesimulator/netraid.app \
-            ../../artifacts/netraid-ios-simulator.app.zip
+            "$GITHUB_WORKSPACE/artifacts/netraid-ios-simulator.app.zip"
+          echo "Packaged:" && ls -la "$GITHUB_WORKSPACE/artifacts"
 
       - name: Boot simulator, install, run Pipeline Demo, record
         if: steps.build.outcome == 'success'
         working-directory: app/ios
         run: |
-          mkdir -p ../../artifacts
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
           UDID=$(xcrun simctl list devices available --json | \
             python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; \
             ids=[x['udid'] for v in d.values() for x in v if 'iPhone' in x['name']]; print(ids[0])")
           echo "Simulator UDID: $UDID"
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b || true
           xcrun simctl install "$UDID" build/Build/Products/Release-iphonesimulator/netraid.app
-          # Determine the bundle id from the built app.
           BID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
             build/Build/Products/Release-iphonesimulator/netraid.app/Info.plist)
           echo "Bundle id: $BID"
+          # Start recording BEFORE launch so the whole run is captured.
+          xcrun simctl io "$UDID" recordVideo --codec h264 "$GITHUB_WORKSPACE/artifacts/ios-pipeline-demo.mov" &
+          REC=$!
+          sleep 2
           xcrun simctl launch "$UDID" "$BID" || true
-          sleep 25
-          ( xcrun simctl io "$UDID" recordVideo --codec h264 ../../artifacts/ios-pipeline-demo.mov & echo $! > /tmp/rec.pid ) || true
-          sleep 3
+          sleep 35   # RN cold start on the simulator
+          xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/artifacts/ios-01-launched.png" || true
           xcrun simctl openurl "$UDID" netraid://demo || true
-          sleep 60
-          xcrun simctl io "$UDID" screenshot ../../artifacts/ios-demo-final.png || true
-          kill -INT "$(cat /tmp/rec.pid)" 2>/dev/null || true
+          sleep 70   # detect -> landmarks -> align -> embed -> match on 4 frames
+          xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/artifacts/ios-02-pipeline-demo.png" || true
+          kill -INT "$REC" 2>/dev/null || true
           sleep 3
+          echo "Artifacts produced:" && ls -la "$GITHUB_WORKSPACE/artifacts"
 
-      - name: Upload demo evidence (screenshots + video, stage 3)
+      - name: Upload demo evidence (screenshots + video + app bundle, stage 3)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ios-demo-evidence
-          path: |
-            app/artifacts/*.png
-            app/artifacts/*.mov
-            app/artifacts/*.zip
+          path: artifacts/
           if-no-files-found: warn
