@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  NetraID backend, offline attendance sync for NHAI Datalake 3.0.
+  API Gateway (HTTP API + Cognito JWT) -> Lambda -> DynamoDB. India region.
+
+# Deploy:  sam build && sam deploy --guided --region ap-south-1
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 15
+    MemorySize: 256
+    Architectures: [arm64]   # Graviton, cheaper, greener
+
+Parameters:
+  CognitoUserPoolArn:
+    Type: String
+    Description: ARN of the Cognito User Pool that issues device/operator JWTs
+
+Resources:
+
+  AttendanceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: NetraIDAttendance
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+        - { AttributeName: gsi1pk, AttributeType: S }
+        - { AttributeName: gsi1sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      GlobalSecondaryIndexes:
+        - IndexName: gsi1-site
+          KeySchema:
+            - { AttributeName: gsi1pk, KeyType: HASH }
+            - { AttributeName: gsi1sk, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+      SSESpecification: { SSEEnabled: true }   # encryption at rest
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub
+                - https://cognito-idp.${Region}.amazonaws.com/${PoolId}
+                - Region: !Select [3, !Split [':', !Ref CognitoUserPoolArn]]
+                  PoolId: !Select [1, !Split ['/', !Select [5, !Split [':', !Ref CognitoUserPoolArn]]]]
+              audience: []
+        DefaultAuthorizer: CognitoJwt
+
+  SyncFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: sync.handler
+      CodeUri: ../lambdas/
+      Environment:
+        Variables:
+          ATTENDANCE_TABLE: !Ref AttendanceTable
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref AttendanceTable }
+      Events:
+        Sync:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/attendance/sync
+            Method: POST
+
+Outputs:
+  ApiUrl:
+    Description: Base URL for the NetraID sync API
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com

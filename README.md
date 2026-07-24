@@ -1,0 +1,116 @@
+# NetraID, Offline Edge Face Authentication for NHAI Datalake 3.0
+
+> **NHAI Innovation Hackathon 7.0**, *Develop a mobile-based secure offline facial recognition and liveness detection system for remote locations.*
+>
+> **Netra** (नेत्र, Sanskrit: "eye"), authentication that works **where the network doesn't.**
+
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS-blue)]()
+[![Framework](https://img.shields.io/badge/framework-React%20Native-61dafb)]()
+[![Inference](https://img.shields.io/badge/inference-100%25%20offline-green)]()
+[![Model size](https://img.shields.io/badge/model-%3C20MB-success)]()
+[![License](https://img.shields.io/badge/license-100%25%20open--source-brightgreen)]()
+
+---
+
+## 1. The Problem (verbatim from the brief)
+
+> *"How can we accurately and securely authenticate field personnel using facial recognition and liveness detection on standard mid-range mobile devices without any active internet connection, while ensuring the AI model remains lightweight and seamlessly integrates with a React Native application on both Android and iOS devices?"*
+
+NHAI field personnel work in **zero-network zones**, remote highway stretches, tunnels, under-construction corridors. Attendance and identity verification there cannot depend on the cloud, cannot be defrauded with a photo, and cannot bloat the existing **Datalake 3.0** app.
+
+## 2. Our Solution in one sentence
+
+**NetraID** is a drop-in React Native module that runs a **MobileFaceNet** embedding model + **multi-factor offline liveness** entirely on-device (**< 20 MB**, **< 1 s**, **> 95 %** accuracy, **no network**), hardens every verdict with a **multi-frame, flip-TTA, margin-checked accuracy engine**, stores only **encrypted face embeddings** (never raw photos), and **syncs-then-purges** to AWS the moment connectivity returns.
+
+```
+        ┌──────────────────────── ON DEVICE (offline) ────────────────────────┐
+        │                                                                      │
+  Camera frame ─▶ Face Detect ─▶ Align/Crop ─▶ MobileFaceNet ─▶ 512-d embedding │
+ (vision-camera)   (BlazeFace)     (112×112)    (TFLite fp32)         │         │
+        │                                                              ▼        │
+        │   Liveness gate (must pass BEFORE match):              Cosine match   │
+        │   ① Active challenge: blink / smile / head-turn         vs enrolled   │
+        │      (Face Mesh → EAR / MAR / yaw)                      templates     │
+        │   ② Passive anti-spoof: MiniFASNet (print/screen)      (encrypted)   │
+        │                                                              │        │
+        │                                  ✅ Authenticated ───────────┘        │
+        │                                  Attendance record → local queue      │
+        └───────────────────────────────────────────┬──────────────────────────┘
+                                                     │  (network restored)
+                                                     ▼
+                          AWS: API Gateway → Lambda → DynamoDB / S3
+                          then  →  LOCAL PII PURGED
+```
+
+## 3. How we hit every hard requirement
+
+| # | Requirement (brief) | Our approach | Result |
+|---|---|---|---|
+| 1 | React Native, Android **+** iOS | `react-native-vision-camera` frame processors + `react-native-fast-tflite` (NNAPI / Core ML / GPU delegates) | One codebase, both OSes |
+| 2 | Model **~20 MB** (smaller better) | MobileFaceNet float32 (**13.6 MB**) + FaceLandmarker (**2.55 MB**) + BlazeFace (**0.23 MB**) + MiniFASNet (**1.68 MB**) | **≈ 17.3 MB total** |
+| 3 | **< 1 s** recognize + liveness | CPU-delegate inference, pipelined frame processor | **371-457 ms** for the full 3-frame verify verdict; **284 ms** avg single-face pipeline (Vivo V2246) |
+| 4 | Android 8+, iOS 12+, 3 GB RAM, no high-end GPU | float32 CPU delegate, no GPU required | ✅ runs on the 3 GB-class Vivo |
+| 5 | **> 95 %** accuracy, Indian demographics, harsh/low light | ArcFace-trained MobileFaceNet (99.76 % LFW) + multi-frame median verdict, flip-TTA, margin rule, quality gates, adaptive dim-light gain | on-device genuine aggregate **0.89-0.90** vs impostor ≈ **0.03** |
+| 6 | **Open-source only**, share source | MobileFaceNet (MIT), MediaPipe (Apache-2.0), MiniFASNet (Apache-2.0), all RN libs MIT | Zero extra licenses |
+| 7 | Offline liveness (blink/smile/turn) | Two calibrated layers: strict active challenge FSM (mandatory blink, motion-stability gate, anti-replay timeouts) + MiniFASNet passive gate (threshold set from measured live-vs-screen scores on the target device) | A laptop-screen replay of the enrolled user is rejected (measured) |
+| 8 | Sync to AWS + **purge** local | NetInfo-triggered queue flush → serverless ingest → local purge | ✅ |
+
+> OS floor note: Android target is `minSdkVersion 26` (Android 8.0), exactly the brief. The recognition and liveness logic and the int8 models run on iOS 12, but the practical iOS floor is set by the host React Native toolchain. This reference app uses RN 0.76 (Xcode floor iOS 15.1) and vision-camera v4 (iOS 13+). For an iOS 12 device target, embed the module in a Datalake host on an RN version with that floor (for example RN 0.71). See `docs/INTEGRATION.md` §3.
+
+## 4. How we win each evaluation criterion (100 marks)
+
+| Criterion | Marks | Our differentiators |
+|---|---:|---|
+| **Innovation**, edge AI efficiency, compression, liveness | 30 | robust **float32** embedder chosen after real on-device testing (int8 produced NaN, fp16 stalled on mid-range hardware); ≈ 17 MB stack under the cap; **multi-frame + flip-TTA + margin accuracy engine with duplicate-face guard**; active-FSM liveness with timeout re-randomization (anti-replay); embeddings-only privacy design |
+| **Feasibility**, Datalake 3.0 integration, < 1 s on mid-range | 30 | Self-contained RN module with a clean `<NetraID/>` API; benchmarked on mid-range; drop-in `NetraIDModule` |
+| **Scalability & Sustainability**, sync/purge, lighting/demographics | 20 | Idempotent offline queue, signed device sync, calibration for Indian demographics + lighting augmentation |
+| **Presentation & Documentation**, code clarity, guides, deck | 20 | This repo + `docs/INTEGRATION.md` step-by-step + benchmark report + pitch deck |
+
+## 5. Repository layout
+
+```
+netraid/
+├── README.md                 ← master overview
+├── app/                      ← React Native cross-platform app + NetraID module
+│   ├── src/netraid/          ← detection, alignment, embedding, liveness, matching, store, sync
+│   ├── src/screens/          ← Home, Enroll, Verify, Pipeline Demo
+│   ├── assets/models/        ← the 4 on-device .tflite models (~17.3 MB)
+│   ├── android/  ios/        ← native shells (minSdkVersion 26 / iOS project)
+│   └── src/netraid/__tests__ ← executable tests for the core algorithms
+├── docs/
+│   ├── ARCHITECTURE.md       ← full technical architecture and decisions
+│   ├── MODEL_PIPELINE.md     ← model selection, conversion, quantization
+│   ├── LIVENESS.md           ← anti-spoofing design (active + passive) + math
+│   ├── INTEGRATION.md        ← step-by-step Datalake 3.0 integration guide
+│   ├── SECURITY_PRIVACY.md   ← biometric template protection, DPDP Act 2023
+│   ├── BENCHMARKS.md         ← measured size / speed / accuracy results
+│   ├── COMPLIANCE.md         ← per-requirement mapping to the brief
+│   └── BUILD.md  ROADMAP.md  ← build record + forward-looking pilot work
+├── backend/                  ← AWS serverless sync (IaC + Lambdas)
+└── .github/workflows/        ← iOS build + simulator demo (cross-platform evidence)
+```
+
+## 6. Quick start
+
+```bash
+cd app && npm install
+npx react-native run-android      # or run-ios on a Mac
+```
+
+The four `.tflite` models are already in `app/assets/models/` and bundled into the app,
+so it runs fully offline out of the box. Full setup details (NDK, CocoaPods, signing) are
+in `docs/INTEGRATION.md`.
+
+## 7. What is built
+
+- **On-device models** (`app/assets/models/`): BlazeFace, FaceLandmarker, MobileFaceNet float32, MiniFASNet float32, real `.tflite` files totalling ≈ 17.3 MB, bundled for fully offline use.
+- **React Native module** (`app/src/netraid/`): detection, alignment, embedding, liveness (strict active challenge FSM with mandatory blink, motion-stability gating and timeout re-randomization, plus a device-calibrated passive MiniFASNet gate), a **multi-frame accuracy engine** (3-frame median verdict, flip-TTA, sharpness/exposure/pose quality gates, camera warm-up, outlier-rejected 6-shot enrollment, best-vs-second margin rule, duplicate-face guard), encrypted SQLCipher storage, and offline-first sync/purge. Typechecks clean and the core algorithms pass an executable test suite (36 tests covering matching, aggregation, liveness math, alignment, imaging, and crop quality).
+- **Pipeline Demo screen** (`app/src/screens/PipelineDemoScreen.tsx`): runs the identical detect → landmark → align → embed → match pipeline on bundled reference frames with per-stage latencies and a ground-truth-checked match matrix. On the test device: 6/6 verdicts correct, 284 ms avg per face. Because it needs no camera, the same screen is the **iOS cross-platform evidence**: `.github/workflows/ios-demo.yml` builds the app on a macOS runner, drives the screen via the `netraid://demo` deep link on an iOS Simulator, and uploads a screen recording as a build artifact.
+- **Cross-platform shells** (`app/android/`, `app/ios/`): Android `minSdkVersion 26`, iOS project, camera permissions and `netraid://` deep links wired on both. The Android app compiles to a real signed standalone APK (models + JS bundled, runs fully offline), verified on a Vivo V2246: genuine aggregate accepted (0.89-0.90), different person rejected (≈ 0.03), full verdict in 371-457 ms. Build record: `docs/BUILD.md`.
+- **Backend** (`backend/`): serverless sync (API Gateway + Lambda + DynamoDB) as IaC.
+
+A per-requirement mapping to the brief is in `docs/COMPLIANCE.md`. The forward-looking pilot work (India-representative recalibration set, on-device latency capture) is tracked in `docs/ROADMAP.md`.
+
+---
+
+*Built for the NHAI Innovation Hackathon 7.0 · Contact: pranjalgupta@nhai.org (organizer)*

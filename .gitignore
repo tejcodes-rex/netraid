@@ -1,0 +1,41 @@
+# Python
+ml/.venv/
+**/__pycache__/
+*.pyc
+
+# Large model artifacts (regenerate via ml/scripts/01..04). Keep the repo light.
+ml/models/raw/
+ml/models/tf_mbf/
+ml/models/tf_drq/
+ml/data/*.npy
+*.zip
+
+# Node / RN
+app/node_modules/
+backend/lambdas/node_modules/
+app/ios/Pods/
+app/android/.gradle/
+app/.expo/
+npm-debug.log*
+
+# App models ARE tracked (app/assets/models/*.tflite, ~16 MB): the repo must
+# build and run as-is on both platforms (and in the iOS CI) without the Python
+# pipeline. They are reproducible from ml/scripts if ever needed.
+
+# Submission bundles (APK + PDFs) are distributed via Drive, not git
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Third-party MiniFASNet source (fetched by scripts/05; Apache-2.0)
+ml/minivision/
+
+# All generated model artifacts (reproducible via ml/scripts)
+ml/models/
+
+# Intermediate artifacts staged for the doc build tools
+build/

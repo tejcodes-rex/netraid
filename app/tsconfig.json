@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2021", "dom"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["react", "react-native"]
+  },
+  "include": ["src", "index.js"],
+  "comment": "Unit tests under src/**/__tests__ are run by jest (jest.logic.config.js) which strips types via babel; they are excluded here so the production typecheck does not require @types/jest.",
+  "exclude": ["src/**/__tests__/**"]
+}

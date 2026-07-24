@@ -1,0 +1,123 @@
+# Cross-platform (iOS) evidence for NetraID, built entirely in the cloud.
+#
+# We do not own Apple hardware, so this GitHub Actions macOS runner compiles the
+# REAL app for iOS (every native module: vision-camera, fast-tflite, op-sqlite,
+# etc.) and then runs the camera-free Pipeline Demo on the iOS Simulator,
+# recording a video. Same TypeScript, same .tflite models as Android.
+#
+# Evidence is uploaded in stages so a successful compile is proof on its own,
+# independent of the simulator recording:
+#   1. ios-build-log        the full xcodebuild output
+#   2. ios-app-bundle       the compiled netraid.app (it built for iOS)
+#   3. ios-demo-evidence    screenshots + screen recording of the demo running
+name: ios-simulator-demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths: ['app/**', '.github/workflows/ios-demo.yml']
+
+jobs:
+  build-and-record:
+    runs-on: macos-14
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select a recent Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Install CocoaPods (Gemfile-pinned) and pods
+        working-directory: app/ios
+        run: |
+          gem install cocoapods -v '>= 1.13' || true
+          bundle install --gemfile=../Gemfile || gem install cocoapods
+          (BUNDLE_GEMFILE=../Gemfile bundle exec pod install) || pod install --repo-update
+
+      - name: Build for iOS Simulator (Release, no signing)
+        id: build
+        working-directory: app/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace netraid.xcworkspace \
+            -scheme netraid \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO \
+            build 2>&1 | tee ../../ios-build.log
+          test -d build/Build/Products/Release-iphonesimulator/netraid.app
+
+      - name: Upload build log (evidence stage 1)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ios-build.log
+          if-no-files-found: warn
+
+      - name: Package the compiled iOS app (evidence stage 2)
+        if: steps.build.outcome == 'success'
+        working-directory: app/ios
+        run: |
+          mkdir -p ../../artifacts
+          ditto -c -k --sequesterRsrc \
+            build/Build/Products/Release-iphonesimulator/netraid.app \
+            ../../artifacts/netraid-ios-simulator.app.zip
+
+      - name: Boot simulator, install, run Pipeline Demo, record
+        if: steps.build.outcome == 'success'
+        working-directory: app/ios
+        run: |
+          mkdir -p ../../artifacts
+          UDID=$(xcrun simctl list devices available --json | \
+            python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; \
+            ids=[x['udid'] for v in d.values() for x in v if 'iPhone' in x['name']]; print(ids[0])")
+          echo "Simulator UDID: $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/Build/Products/Release-iphonesimulator/netraid.app
+          # Determine the bundle id from the built app.
+          BID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' \
+            build/Build/Products/Release-iphonesimulator/netraid.app/Info.plist)
+          echo "Bundle id: $BID"
+          xcrun simctl launch "$UDID" "$BID" || true
+          sleep 25
+          ( xcrun simctl io "$UDID" recordVideo --codec h264 ../../artifacts/ios-pipeline-demo.mov & echo $! > /tmp/rec.pid ) || true
+          sleep 3
+          xcrun simctl openurl "$UDID" netraid://demo || true
+          sleep 60
+          xcrun simctl io "$UDID" screenshot ../../artifacts/ios-demo-final.png || true
+          kill -INT "$(cat /tmp/rec.pid)" 2>/dev/null || true
+          sleep 3
+
+      - name: Upload demo evidence (screenshots + video, stage 3)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-demo-evidence
+          path: |
+            app/artifacts/*.png
+            app/artifacts/*.mov
+            app/artifacts/*.zip
+          if-no-files-found: warn

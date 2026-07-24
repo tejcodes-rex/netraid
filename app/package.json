@@ -1,0 +1,48 @@
+{
+  "name": "netraid-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NetraID, offline edge face authentication for NHAI Datalake 3.0",
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "lint": "eslint .",
+    "tsc": "tsc --noEmit",
+    "test": "jest -c jest.logic.config.js"
+  },
+  "dependencies": {
+    "@op-engineering/op-sqlite": "^11.2.5",
+    "@react-native-community/netinfo": "^11.4.1",
+    "@react-navigation/native": "^7.0.14",
+    "@react-navigation/native-stack": "^7.1.14",
+    "react": "18.3.1",
+    "react-native": "0.76.5",
+    "react-native-fast-tflite": "^1.6.1",
+    "react-native-get-random-values": "^1.11.0",
+    "react-native-keychain": "^9.2.2",
+    "react-native-safe-area-context": "^5.0.0",
+    "react-native-screens": "4.4.0",
+    "react-native-uuid": "^2.0.3",
+    "react-native-vision-camera": "^4.6.4",
+    "react-native-worklets-core": "^1.5.0",
+    "vision-camera-resize-plugin": "^3.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@babel/preset-env": "^7.25.0",
+    "@react-native-community/cli": "^15.0.1",
+    "@react-native-community/cli-platform-android": "^15.0.1",
+    "@react-native-community/cli-platform-ios": "^15.0.1",
+    "@react-native/babel-preset": "0.76.5",
+    "@react-native/metro-babel-transformer": "^0.76.5",
+    "@react-native/metro-config": "^0.76.5",
+    "@types/react": "^18.3.12",
+    "jest": "^29.7.0",
+    "typescript": "^5.6.3"
+  },
+  "comment_versions": "Run `npm view <pkg> version` to confirm current versions before pinning. The stack: vision-camera v4 frame processors (needs worklets-core + the babel plugin), fast-tflite for on-device inference, resize-plugin to shape frames into the model tensor.",
+  "op-sqlite": {
+    "sqlcipher": true
+  }
+}
