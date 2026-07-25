@@ -105,11 +105,12 @@ jobs:
           xcrun simctl io "$UDID" recordVideo --codec h264 "$GITHUB_WORKSPACE/artifacts/ios-pipeline-demo.mov" &
           REC=$!
           sleep 2
-          xcrun simctl launch "$UDID" "$BID" || true
-          sleep 35   # RN cold start on the simulator
+          # Launch straight into the Pipeline Demo via the --demo launch arg
+          # (AppDelegate reads it), so no deep-link confirmation dialog appears.
+          xcrun simctl launch "$UDID" "$BID" --demo || true
+          sleep 40   # RN cold start
           xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/artifacts/ios-01-launched.png" || true
-          xcrun simctl openurl "$UDID" netraid://demo || true
-          sleep 70   # detect -> landmarks -> align -> embed -> match on 4 frames
+          sleep 55   # detect -> landmarks -> align -> embed -> match on the 4 frames
           xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/artifacts/ios-02-pipeline-demo.png" || true
           kill -INT "$REC" 2>/dev/null || true
           sleep 3

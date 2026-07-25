@@ -42,13 +42,17 @@ const linking = {
   },
 };
 
-export default function App() {
+export default function App(props: { demo?: boolean }) {
+  // `demo` is set by the iOS AppDelegate when the app is launched with "--demo"
+  // (the CI simulator run): open the camera-free Pipeline Demo directly.
+  const initialRoute = props?.demo ? 'PipelineDemo' : 'Home';
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
       <StatusBar barStyle="light-content" backgroundColor={color.bg} />
       <NavigationContainer theme={navTheme} linking={linking}>
         <Stack.Navigator
+          initialRouteName={initialRoute}
           screenOptions={{
             headerStyle: { backgroundColor: color.bg },
             headerTitleStyle: { fontFamily: font.display, color: color.ink },
