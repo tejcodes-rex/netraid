@@ -50,8 +50,7 @@ attribution and the [`NOTICE`](NOTICE) file be preserved in any redistribution.
 
 Every component it depends on is Apache-2.0, MIT or BSD; nothing in the stack requires an
 additional licence to be purchased. [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists
-each one. Commercial integration, calibration on deployment hardware and ongoing support are
-available from the author.
+each one.
 
 | Layer | Choice | Version | Licence | Why this one |
 |---|---|---|---|---|
