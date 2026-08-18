@@ -41,7 +41,7 @@ ml/models/
 GRAND FINALE/
 deck/
 submission/
-tools/
+tools/build_proposal_zip.py
 web/
 ignore/
 dist/
