@@ -23,23 +23,54 @@ NHAI field personnel work in **zero-network zones**, remote highway stretches, t
 **NetraID** is a drop-in React Native module that runs a **MobileFaceNet** embedding model + **multi-factor offline liveness** entirely on-device (**< 20 MB**, **< 1 s**, **> 95 %** accuracy, **no network**), hardens every verdict with a **multi-frame, flip-TTA, margin-checked accuracy engine**, stores only **encrypted face embeddings** (never raw photos), and **syncs-then-purges** to AWS the moment connectivity returns.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph device ["On device, no network required"]
-        direction LR
-        A["Capture<br/>vision-camera"]
-        B["Detect + landmarks<br/>BlazeFace 0.23 MB<br/>FaceLandmarker 2.55 MB"]
-        C["Liveness gate<br/>active challenge, random order<br/>MiniFASNet 1.68 MB"]
-        D["Align + embed<br/>112x112, MobileFaceNet 13.6 MB<br/>512-d vector"]
-        E["Match<br/>cosine vs enrolled"]
-        F["Encrypted store, SQLCipher<br/>embeddings only<br/>attendance sync queue"]
-        A --> B --> C --> D --> E --> F
+        direction TB
+        subgraph row1 [" "]
+            direction LR
+            A["Capture<br/>vision-camera"] --> B["Detect + landmarks<br/>BlazeFace 0.23 MB<br/>FaceLandmarker 2.55 MB"] --> C["Liveness gate<br/>active challenge, random order<br/>MiniFASNet 1.68 MB"]
+        end
+        subgraph row2 [" "]
+            direction LR
+            D["Align + embed<br/>112x112, MobileFaceNet 13.6 MB<br/>512-d vector"] --> E["Match<br/>cosine vs enrolled"] --> F["Encrypted store, SQLCipher<br/>embeddings only<br/>attendance sync queue"]
+        end
+        C --> D
     end
 
     F -. "network restored" .-> G["API Gateway, Lambda, DynamoDB<br/>ap-south-1"]
     G -. "acknowledged" .-> H["Local records purged"]
 ```
 
-## 3. How we hit every hard requirement
+## 3. Technology stack
+
+Every component is MIT or Apache-2.0. Nothing here carries a commercial licence, a runtime
+fee, or a per-device cost.
+
+| Layer | Choice | Version | Licence | Why this one |
+|---|---|---|---|---|
+| App framework | React Native | 0.76.5 | MIT | The brief requires it, and it is what Datalake 3.0 is built on |
+| Language | TypeScript | 5.x | Apache-2.0 | The whole NetraID core is typed; native code is confined to two small Kotlin files |
+| Camera + frame processing | react-native-vision-camera | 4.7.3 | MIT | Frame processors run as worklets on their own thread, so inference never blocks the UI |
+| Worklet runtime | react-native-worklets-core | 1.6.3 | MIT | Required by the frame processor |
+| Inference runtime | react-native-fast-tflite (TensorFlow Lite) | 1.6.x | Apache-2.0 | JSI-based, no bridge crossing per frame; CPU delegate only, so no GPU is required |
+| Face detection | MediaPipe BlazeFace, short range | 0.23 MB | Apache-2.0 | Designed for front-camera selfie distance on mobile CPUs |
+| Landmarks | MediaPipe FaceLandmarker | 2.55 MB | Apache-2.0 | 468 points, which is what the blink, smile and head-turn geometry is computed from |
+| Passive anti-spoof | MiniFASNet V2, Silent-Face | 1.68 MB | Apache-2.0 | Purpose-built for print and replay attacks, and small enough to fit the budget |
+| Face recognition | MobileFaceNet, ArcFace-trained | 13.6 MB | MIT | 99.76% on LFW at a size that fits. EdgeFace scores higher but its licence forbids commercial use, so it was rejected |
+| Local database | op-sqlite + SQLCipher | 11.x | MIT | SQLite with AES-256 page encryption. On the device, not the server |
+| Key storage | Android Keystore, iOS Keychain | platform | platform | The database key is generated on the device and never leaves it |
+| Cloud sync, optional | API Gateway, Lambda, DynamoDB | ap-south-1 | n/a | One POST endpoint. See the note below |
+| Model conversion | PyTorch, ONNX, onnx2tf | `ml/scripts/` | BSD / MIT | Reproducible: every model in the app can be rebuilt from `ml/scripts/01..06` |
+
+**On-device model footprint: 17.3 MB total**, against the 20 MB target in the brief.
+
+**The cloud is optional and replaceable.** Authentication needs no server at all. The only
+network dependency is a single `POST /v1/attendance/sync` that drains the offline queue.
+The AWS stack in `backend/` is a working reference implementation of that one endpoint,
+provided so the contract and its idempotency behaviour are unambiguous. A deployment can
+point the client at Datalake 3.0's own backend instead and delete it.
+
+## 4. How we hit every hard requirement
 
 | # | Requirement (brief) | Our approach | Result |
 |---|---|---|---|
@@ -49,12 +80,12 @@ flowchart LR
 | 4 | Android 8+, iOS 12+, 3 GB RAM, no high-end GPU | float32 CPU delegate, no GPU required | Runs on the 3 GB-class Vivo |
 | 5 | **> 95 %** accuracy, Indian demographics, harsh/low light | ArcFace-trained MobileFaceNet (99.76 % LFW) + multi-frame median verdict, flip-TTA, margin rule, quality gates, adaptive dim-light gain | on-device genuine aggregate **0.89-0.90** vs impostor ≈ **0.03** |
 | 6 | **Open-source only**, share source | MobileFaceNet (MIT), MediaPipe (Apache-2.0), MiniFASNet (Apache-2.0), all RN libs MIT | Zero extra licenses |
-| 7 | Offline liveness (blink/smile/turn) | Two calibrated layers: strict active challenge FSM (mandatory blink, motion-stability gate, anti-replay timeouts) + MiniFASNet passive gate (threshold set from measured live-vs-screen scores on the target device) | A laptop-screen replay of the enrolled user is rejected (measured) |
+| 7 | Offline liveness (blink/smile/turn) | Active challenge FSM, enforced: random order, mandatory neutral before each gesture, bounded reaction window, motion-stability gate. Continuity binding, enforced: the liveness proof and the identity capture must come from one continuously tracked face. MiniFASNet passive gate, computed and reported on every attempt, not enforced pending calibration on deployment hardware | Photographs and mid-attempt substitution are rejected. The passive gate is measured, with the arming procedure in `docs/CALIBRATION.md` |
 | 8 | Sync to AWS + **purge** local | NetInfo-triggered queue flush → serverless ingest → local purge | Met |
 
 > OS floor note: Android target is `minSdkVersion 26` (Android 8.0), exactly the brief. The recognition and liveness logic and the int8 models run on iOS 12, but the practical iOS floor is set by the host React Native toolchain. This reference app uses RN 0.76 (Xcode floor iOS 15.1) and vision-camera v4 (iOS 13+). For an iOS 12 device target, embed the module in a Datalake host on an RN version with that floor (for example RN 0.71). See `docs/INTEGRATION.md` §3.
 
-## 4. How we win each evaluation criterion (100 marks)
+## 5. How we win each evaluation criterion (100 marks)
 
 | Criterion | Marks | Our differentiators |
 |---|---:|---|
@@ -63,7 +94,17 @@ flowchart LR
 | **Scalability & Sustainability**, sync/purge, lighting/demographics | 20 | Idempotent offline queue, signed device sync, calibration for Indian demographics + lighting augmentation |
 | **Presentation & Documentation**, code clarity, guides, deck | 20 | This repo + `docs/INTEGRATION.md` step-by-step + benchmark report + pitch deck |
 
-## 5. Repository layout
+## 6. Interactive source map
+
+`docs/index.html` is a self-contained page that maps the codebase: what each module owns, the
+verification flow step by step, the four models with their input conventions, every configuration
+threshold and whether it is enforced, the two integration call sites, and the sync contract.
+
+It is one file with no external dependencies, so it opens offline by double-clicking it. Published
+at **https://tejcodes-rex.github.io/netraid/** when GitHub Pages is enabled for this repository
+(Settings, Pages, source: `master` branch, `/docs` folder).
+
+## 7. Repository layout
 
 ```
 netraid/
@@ -87,7 +128,7 @@ netraid/
 └── .github/workflows/         # iOS build + simulator demo (cross-platform evidence)
 ```
 
-## 6. Quick start
+## 8. Quick start
 
 ```bash
 cd app && npm install
@@ -98,7 +139,7 @@ The four `.tflite` models are already in `app/assets/models/` and bundled into t
 so it runs fully offline out of the box. Full setup details (NDK, CocoaPods, signing) are
 in `docs/INTEGRATION.md`.
 
-## 7. What is built
+## 9. What is built
 
 - **On-device models** (`app/assets/models/`): BlazeFace, FaceLandmarker, MobileFaceNet float32, MiniFASNet float32, real `.tflite` files totalling ≈ 17.3 MB, bundled for fully offline use.
 - **React Native module** (`app/src/netraid/`): detection, alignment, embedding, liveness (strict active challenge FSM with mandatory blink, motion-stability gating and timeout re-randomization, plus a device-calibrated passive MiniFASNet gate), a **multi-frame accuracy engine** (3-frame median verdict, flip-TTA, sharpness/exposure/pose quality gates, camera warm-up, outlier-rejected 6-shot enrollment, best-vs-second margin rule, duplicate-face guard), encrypted SQLCipher storage, and offline-first sync/purge. Typechecks clean and the core algorithms pass an executable test suite (36 tests covering matching, aggregation, liveness math, alignment, imaging, and crop quality).

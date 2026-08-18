@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetraID Source Map</title>
+<style>
+  :root{
+    --bg:#0e1512; --panel:#141d19; --panel2:#1a2521; --line:#22322c;
+    --ink:#e8f2ed; --dim:#93a89e; --accent:#1fd27a; --accent2:#5ec8ff;
+    --warn:#f2b705;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{padding:28px 32px;border-bottom:1px solid var(--line);background:var(--panel)}
+  h1{margin:0 0 4px;font-size:22px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--dim);font-size:14px;max-width:820px}
+  .wrap{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 92px)}
+  nav{border-right:1px solid var(--line);padding:18px 0;background:var(--panel)}
+  nav button{display:block;width:100%;text-align:left;padding:9px 20px;background:none;border:0;
+    color:var(--dim);font:inherit;font-size:14px;cursor:pointer;border-left:3px solid transparent}
+  nav button:hover{color:var(--ink);background:var(--panel2)}
+  nav button.on{color:var(--accent);border-left-color:var(--accent);background:var(--panel2)}
+  main{padding:28px 32px;max-width:1080px}
+  section{display:none}
+  section.on{display:block}
+  h2{font-size:19px;margin:0 0 6px}
+  h3{font-size:15px;margin:26px 0 8px;color:var(--accent)}
+  .sub{color:var(--dim);margin:0 0 22px;font-size:14px}
+  table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:13.5px}
+  th{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);color:var(--dim);
+    font-weight:600;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:hover td{background:var(--panel2)}
+  code,pre{font-family:var(--mono);font-size:13px}
+  code{background:var(--panel2);padding:1px 5px;border-radius:3px;color:var(--accent2)}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:14px 16px;
+    overflow-x:auto;line-height:1.5}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:14px 0}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+    cursor:pointer;transition:border-color .12s}
+  .card:hover{border-color:var(--accent)}
+  .card h4{margin:0 0 4px;font-size:14px;font-family:var(--mono);color:var(--accent2)}
+  .card p{margin:0;color:var(--dim);font-size:12.5px;line-height:1.5}
+  .card .n{float:right;color:var(--dim);font-size:11px;font-family:var(--mono)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;
+    letter-spacing:.03em;white-space:nowrap}
+  .t-on{background:rgba(31,210,122,.15);color:var(--accent)}
+  .t-rep{background:rgba(242,183,5,.15);color:var(--warn)}
+  .t-off{background:rgba(147,168,158,.15);color:var(--dim)}
+  .note{border-left:3px solid var(--accent);background:var(--panel2);padding:12px 16px;
+    border-radius:0 6px 6px 0;margin:16px 0;font-size:13.5px}
+  .note.warn{border-left-color:var(--warn)}
+  dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;
+    max-width:620px;padding:0}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  .dlg-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;
+    justify-content:space-between;align-items:center;gap:16px}
+  .dlg-h h4{margin:0;font-family:var(--mono);font-size:14px;color:var(--accent2)}
+  .dlg-h button{background:none;border:0;color:var(--dim);font-size:22px;cursor:pointer;line-height:1}
+  .dlg-b{padding:18px 20px;font-size:14px}
+  .dlg-b p{margin:0 0 12px}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 22px}
+  .step{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 12px;
+    font-size:12.5px;font-family:var(--mono)}
+  .arw{color:var(--dim)}
+  @media(max-width:820px){
+    .wrap{grid-template-columns:1fr}
+    nav{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:0}
+    nav button{white-space:nowrap;border-left:0;border-bottom:3px solid transparent}
+    nav button.on{border-left:0;border-bottom-color:var(--accent)}
+    main{padding:22px 18px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>NetraID Source Map</h1>
+  <p>Offline facial recognition and liveness detection for NHAI Datalake 3.0. An interactive guide to the codebase, the on-device models, and the integration points.</p>
+</header>
+
+<div class="wrap">
+<nav>
+  <button class="on" data-t="overview">Overview</button>
+  <button data-t="modules">Module map</button>
+  <button data-t="flow">Verification flow</button>
+  <button data-t="models">Models</button>
+  <button data-t="config">Configuration</button>
+  <button data-t="integrate">Integration</button>
+  <button data-t="sync">Sync contract</button>
+  <button data-t="platform">Platform status</button>
+</nav>
+
+<main>
+<section id="overview" class="on">
+  <h2>What this is</h2>
+  <p class="sub">A drop-in React Native module. Face recognition and liveness run entirely on the handset. The network is optional and is used only to drain an offline queue.</p>
+
+  <div class="flow">
+    <span class="step">Capture</span><span class="arw">&rarr;</span>
+    <span class="step">Detect + landmarks</span><span class="arw">&rarr;</span>
+    <span class="step">Liveness</span><span class="arw">&rarr;</span>
+    <span class="step">Align + embed</span><span class="arw">&rarr;</span>
+    <span class="step">Match</span><span class="arw">&rarr;</span>
+    <span class="step">Encrypted store</span>
+  </div>
+
+  <h3>Measured on a Vivo V2246, a 3 GB-class mid-range handset</h3>
+  <table>
+    <tr><th>Metric</th><th>Measured</th><th>Requirement in the brief</th></tr>
+    <tr><td>On-device model footprint</td><td>17.3 MB</td><td>around 20 MB, smaller is better</td></tr>
+    <tr><td>Full verification verdict</td><td>371 to 604 ms</td><td>under 1 second</td></tr>
+    <tr><td>Recognition accuracy</td><td>99.76 percent on LFW</td><td>above 95 percent</td></tr>
+    <tr><td>Genuine match score on device</td><td>0.65 to 0.86</td><td>accept threshold 0.38</td></tr>
+    <tr><td>Minimum Android</td><td>8.0, minSdkVersion 26</td><td>Android 8.0 and above</td></tr>
+    <tr><td>GPU</td><td>not required, CPU delegate only</td><td>no high-end GPU</td></tr>
+  </table>
+
+  <div class="note">
+    <strong>Licensing.</strong> Every component is MIT or Apache-2.0. EdgeFace scores higher than
+    MobileFaceNet on paper and was rejected because its licence forbids commercial use. There is no
+    runtime fee and no per-device cost anywhere in this stack.
+  </div>
+</section>
+
+<section id="modules">
+  <h2>Module map</h2>
+  <p class="sub">Everything under <code>app/src/netraid/</code>. Select a module for detail. Line counts are from the shipped source.</p>
+  <div class="grid" id="modgrid"></div>
+</section>
+
+<section id="flow">
+  <h2>One verification, start to finish</h2>
+  <p class="sub">What runs, in order, and on which thread.</p>
+  <table>
+    <tr><th>#</th><th>Step</th><th>Where</th><th>Notes</th></tr>
+    <tr><td>1</td><td>Frame arrives</td><td>worklet thread</td><td>Every second frame is processed; the rest are dropped to bound worklet memory</td></tr>
+    <tr><td>2</td><td>Sensor warm-up</td><td>worklet</td><td>The first 1.2 seconds are discarded while exposure and white balance converge</td></tr>
+    <tr><td>3</td><td>Detect</td><td>BlazeFace</td><td>Bounding box and 6 keypoints, with adaptive gain applied in dim light</td></tr>
+    <tr><td>4</td><td>Landmarks</td><td>FaceLandmarker</td><td>468 points, giving eye aspect ratio, mouth width ratio and yaw</td></tr>
+    <tr><td>5</td><td>Active challenge</td><td>worklet FSM</td><td>Random order. Each step requires a confirmed neutral face, then the gesture no sooner than 350 ms and no later than 4 seconds</td></tr>
+    <tr><td>6</td><td>Continuity binding</td><td>worklet</td><td>From the last gesture through the capture, the same tracked face must remain in frame</td></tr>
+    <tr><td>7</td><td>Passive anti-spoof</td><td>MiniFASNet</td><td>BGR in [0,1], crop 2.7x the face box, padded rather than clamped</td></tr>
+    <tr><td>8</td><td>Quality gates</td><td>worklet</td><td>Frontal, sharp, correctly exposed, and colour balance settled</td></tr>
+    <tr><td>9</td><td>Align</td><td>JS thread</td><td>5-point similarity transform to 112x112</td></tr>
+    <tr><td>10</td><td>Embed</td><td>MobileFaceNet</td><td>512-d vector, with flip test-time augmentation</td></tr>
+    <tr><td>11</td><td>Match</td><td>JS thread</td><td>Cosine against enrolled templates, aggregated across 3 captures with a margin rule</td></tr>
+    <tr><td>12</td><td>Record</td><td>SQLCipher</td><td>Attendance row queued locally, encrypted</td></tr>
+  </table>
+  <div class="note">
+    <strong>Liveness is evaluated before identity.</strong> A failed liveness verdict short-circuits
+    the attempt: no embedding is computed and no match is attempted.
+  </div>
+</section>
+
+<section id="models">
+  <h2>On-device models</h2>
+  <p class="sub">Four TFLite graphs, 17.3 MB together. All run on the CPU delegate, so no GPU is required.</p>
+  <table>
+    <tr><th>Model</th><th>Size</th><th>Licence</th><th>Input convention</th><th>Used for</th></tr>
+    <tr><td><code>blazeface_short_range</code></td><td>0.22 MB</td><td>Apache-2.0</td><td>RGB 128x128, [0,1]</td><td>Face detection</td></tr>
+    <tr><td><code>face_landmarker</code></td><td>2.44 MB</td><td>Apache-2.0</td><td>RGB 256x256</td><td>468 landmarks, gesture geometry</td></tr>
+    <tr><td><code>minifasnet_fp32</code></td><td>1.67 MB</td><td>Apache-2.0</td><td><strong>BGR 80x80, [0,1]</strong>, crop 2.7x face box</td><td>Passive anti-spoof</td></tr>
+    <tr><td><code>mobilefacenet_f32</code></td><td>13.00 MB</td><td>MIT</td><td>RGB 112x112, aligned</td><td>512-d face embedding</td></tr>
+  </table>
+  <div class="note warn">
+    <strong>The MiniFASNet input convention is verified, not assumed.</strong>
+    <code>ml/scripts/06_verify_minifasnet_fidelity.py</code> runs identical tensors through the
+    original PyTorch weights and the shipped TFLite file. Fed [0,1] they agree to 3e-8. Fed raw
+    0-255 they differ by 0.99, and the model then returns P(real) = 0.995 on random noise, which
+    means it is no longer computing anything meaningful. Run this check before changing
+    preprocessing and after any re-conversion.
+  </div>
+  <h3>Reproducing every model from source</h3>
+  <pre>cd ml
+python scripts/01_download_models.py            # fetch upstream weights
+python scripts/02_convert_to_tflite.py          # recognition graph
+python scripts/04_export_app_models.py          # stage into app/assets/models
+python scripts/05_convert_minifasnet.py         # anti-spoof graph
+python scripts/06_verify_minifasnet_fidelity.py # ground-truth check</pre>
+</section>
+
+<section id="config">
+  <h2>Configuration reference</h2>
+  <p class="sub">Every operating point lives in <code>app/src/netraid/types.ts</code> as <code>DEFAULT_CONFIG</code>. The values below are what ships.</p>
+  <h3>Recognition</h3>
+  <table>
+    <tr><th>Field</th><th>Value</th><th>Meaning</th></tr>
+    <tr><td><code>matchThreshold</code></td><td>0.38</td><td>Minimum cosine similarity to accept a match</td></tr>
+    <tr><td><code>matchMargin</code></td><td>0.08</td><td>Required gap over the next-best different person</td></tr>
+    <tr><td><code>verifyShots</code></td><td>3</td><td>Frames aggregated per verification</td></tr>
+    <tr><td><code>enrollShots</code></td><td>6</td><td>Candidate frames per enrollment</td></tr>
+  </table>
+  <h3>Liveness gates</h3>
+  <table>
+    <tr><th>Gate</th><th>Operating point</th><th>State</th></tr>
+    <tr><td>Active challenge</td><td>2 steps, drawn without replacement, 350 ms to 4 s each</td><td><span class="tag t-on">ENFORCED</span></td></tr>
+    <tr><td>Continuity binding</td><td>600 ms gap, 0.22 positional jump, 1.7x scale change</td><td><span class="tag t-on">ENFORCED</span></td></tr>
+    <tr><td><code>passiveMode</code></td><td><code>passiveThreshold</code> 0.15 on the median</td><td><span class="tag t-rep">MEASURED</span></td></tr>
+    <tr><td><code>screenSpoofMode</code></td><td><code>screenSpoofMax</code> 0.85 on the consensus</td><td><span class="tag t-rep">MEASURED</span></td></tr>
+    <tr><td><code>enrollSpoofMode</code></td><td><code>enrollPassiveThreshold</code> 0.08</td><td><span class="tag t-rep">MEASURED</span></td></tr>
+    <tr><td><code>chromaMode</code></td><td><code>chromaThreshold</code> 1.25</td><td><span class="tag t-off">OFF</span></td></tr>
+  </table>
+  <div class="note warn">
+    <strong>Why some gates report rather than reject.</strong> A gate is armed only where a
+    measurement on the deployment hardware supports it. On our test handset the passive model's
+    live and attack distributions were not separated stably enough to justify a threshold, so it
+    records its reading on every attempt instead of rejecting. <code>docs/CALIBRATION.md</code> is
+    the procedure for arming it, and it is roughly a thirty-minute job on a target device. A
+    threshold carried over from other hardware is not a security control.
+  </div>
+</section>
+
+<section id="integrate">
+  <h2>Integration into Datalake 3.0</h2>
+  <p class="sub">One module directory, two call sites, and one optional endpoint.</p>
+  <h3>1. Copy the module</h3>
+  <pre>cp -r app/src/netraid   &lt;datalake&gt;/src/netraid
+cp -r app/assets/models &lt;datalake&gt;/assets/models</pre>
+  <h3>2. Peer dependencies</h3>
+  <pre>npm install react-native-vision-camera react-native-worklets-core \
+            react-native-fast-tflite @op-engineering/op-sqlite \
+            react-native-uuid @react-native-community/netinfo</pre>
+  <h3>3. The two call sites</h3>
+  <pre>import { NetraID } from "./netraid";
+
+await NetraID.init();
+
+// Enrollment, 6 quality-gated shots
+await NetraID.enroll({ personId: "NHAI-04821", captures });
+
+// Verification, 3-frame aggregate
+const r = await NetraID.verify({ captures, requireLiveness: true });
+// r -> { ok, personId, score, liveness, elapsedMs }</pre>
+  <p class="sub"><code>captures</code> come from <code>useNetraFrameProcessor</code>, which emits
+  only quality-gated, liveness-passed, aligned 112x112 crops. <code>enroll</code> throws
+  <code>DuplicateFaceError</code> if the face is already enrolled under a different id: one face,
+  one identity.</p>
+  <div class="note">
+    Alternatively, mount the ready-made screens (<code>HomeScreen</code>,
+    <code>EnrollScreen</code>, <code>VerifyScreen</code>) straight into an existing navigator.
+  </div>
+</section>
+
+<section id="sync">
+  <h2>Sync and purge contract</h2>
+  <p class="sub">The only network dependency. Authentication itself never needs a server.</p>
+  <h3>Request</h3>
+  <pre>POST /v1/attendance/sync
+Content-Type: application/json
+X-Device-Id: &lt;device uuid&gt;
+Authorization: Bearer &lt;JWT&gt;
+
+{ "records": [
+    { "id": "&lt;client uuid&gt;", "personId": "NHAI-04821", "ts": 1755500000000,
+      "siteId": "TOLL-12", "lat": 19.07, "lng": 72.87,
+      "deviceId": "&lt;device uuid&gt;", "livenessPassed": true, "matchScore": 0.86 }
+] }</pre>
+  <h3>Response</h3>
+  <pre>{ "results": [ { "id": "&lt;client uuid&gt;", "status": "ok" } ] }</pre>
+  <div class="note">
+    <strong>Why purging is safe.</strong> Every record carries a client-generated UUID, and the
+    server writes with <code>ConditionExpression: attribute_not_exists(id)</code>, so a retry
+    cannot duplicate a record. The device deletes a local row only after the server returns
+    <code>status: "ok"</code> for that id. Anything not acknowledged stays queued.
+  </div>
+  <div class="note">
+    <strong>The AWS stack is a reference, not a requirement.</strong> <code>backend/</code>
+    implements this endpoint on API Gateway, Lambda and DynamoDB so the contract and its
+    idempotency behaviour are unambiguous. A deployment can point the client at Datalake 3.0's own
+    backend and delete it entirely.
+  </div>
+</section>
+
+<section id="platform">
+  <h2>Platform status</h2>
+  <p class="sub">Stated precisely, including what has not been verified.</p>
+  <table>
+    <tr><th>Platform</th><th>Status</th><th>Evidence</th></tr>
+    <tr><td>Android</td><td><span class="tag t-on">VERIFIED ON DEVICE</span></td><td>Signed release APK built from source for all four ABIs. Enrollment, verification and matching exercised on a Vivo V2246</td></tr>
+    <tr><td>iOS</td><td><span class="tag t-rep">BUILDS IN CI</span></td><td>Xcode build succeeds in GitHub Actions, with simulator video and screenshots. A device pass on the current revision is pending</td></tr>
+  </table>
+  <div class="note warn">
+    <strong>iOS, stated plainly.</strong> The NetraID core is TypeScript and platform-neutral, and
+    <code>app/ios/</code> has camera permissions and deep links wired. One native module,
+    <code>ScreenLampModule</code>, is Android-only and is called behind a platform guard, so iOS is
+    unaffected by it. What has not happened is a run of the current revision on physical iOS
+    hardware. The deployment target follows React Native 0.76, which is iOS 15.1; embedding the
+    module sources into a host app built on an older React Native reaches the iOS 12 floor named in
+    the brief. See <code>docs/INTEGRATION.md</code>.
+  </div>
+  <h3>Build from source</h3>
+  <pre>cd app &amp;&amp; npm install --legacy-peer-deps
+cd android &amp;&amp; ./gradlew assembleRelease</pre>
+  <p class="sub">This produces one APK per ABI plus a universal one. On Windows the native build
+  stages itself at a short path automatically, because a stock React Native 0.76 project exceeds
+  the 260-character path limit on its own. See <code>docs/BUILD.md</code>.</p>
+</section>
+</main>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-h"><h4 id="dlg-t"></h4><button id="dlg-x" aria-label="Close">&times;</button></div>
+  <div class="dlg-b" id="dlg-b"></div>
+</dialog>
+
+<script>
+var MODULES = [
+  ["index.ts", 230, "Public API: init, enroll, verify. The only surface a host app calls.",
+   "Owns the verdict. Aggregates the multi-frame match, applies the margin rule, enforces the enrollment gate, and writes the attendance row. Throws DuplicateFaceError and SpoofedEnrollmentError."],
+  ["frameProcessor.ts", 785, "The real-time worklet, running on every second camera frame, off the JS thread.",
+   "Detection, landmarks, the challenge state machine, continuity binding, the passive anti-spoof read, and every quality gate. Emits only aligned, quality-gated crops. The anti-spoof crop geometry and input normalisation live here."],
+  ["liveness.ts", 278, "Challenge state machine and the liveness verdict.",
+   "Blink, smile and head-turn detection from landmark geometry, the reaction-window rules, and decideLiveness, which combines the active result with the passive gates according to their configured modes."],
+  ["types.ts", 341, "Public and internal types, and DEFAULT_CONFIG.",
+   "Every threshold and gate mode, each documented with the measurement it came from. This is the single place to change an operating point."],
+  ["recognition.ts", 97, "MobileFaceNet embedding through TFLite.",
+   "Loads the graph via the useTensorflowModel hook and produces a 512-d vector with flip test-time augmentation."],
+  ["align.ts", 141, "Face alignment.",
+   "Estimates a similarity transform from 5 landmarks using Umeyama, then warps to the 112x112 crop the embedder expects."],
+  ["math.ts", 135, "Vector maths for matching.",
+   "Cosine similarity, robust averaging for enrollment templates, and the median and consensus aggregations used across a capture burst."],
+  ["store.ts", 137, "Encrypted local storage.",
+   "op-sqlite with SQLCipher. Stores embeddings and the attendance queue. No image is ever written to disk."],
+  ["keys.ts", 43, "Hardware-backed key management.",
+   "The database key is generated once on the device and held in the Android Keystore or the iOS Keychain. It never leaves the handset."],
+  ["sync.ts", 109, "Offline-first sync engine.",
+   "Writes are always local first. Flushes the queue when connectivity returns and purges only those records the server acknowledged."],
+  ["chroma.ts", 329, "Screen-illumination challenge.",
+   "Off by default. Flashes a colour sequence drawn from a CSPRNG at verification time and measures the response. Kept for indoor deployments that calibrate it; it cannot work in daylight, where a phone screen is not a meaningful share of the light."],
+  ["quality.ts", 42, "Capture quality scoring.",
+   "Laplacian sharpness and exposure checks on the aligned crop. A blurred or badly exposed crop degrades both enrollment templates and verification probes."],
+  ["blazeface.ts", 124, "BlazeFace post-processing.",
+   "Anchor generation, box decoding and non-maximum suppression over the detector output."],
+  ["calibration.ts", 25, "Calibration telemetry.",
+   "One machine-readable line per attempt, in release builds. Carries model scores and timings only: never an embedding, an image, or a person id."],
+  ["imaging.ts", 93, "Raster helpers.",
+   "Pure functions used by the camera-free pipeline path, which is what makes the core testable without a device."],
+  ["screenLamp.ts", 28, "Screen brightness control.",
+   "Android-only native bridge used by the chroma challenge, called behind a platform guard."],
+  ["demoPipeline.ts", 130, "Camera-free pipeline demo.",
+   "Runs the full recognition path over bundled frames, so the pipeline can be demonstrated without a live camera."]
+];
+
+var grid = document.getElementById("modgrid");
+MODULES.forEach(function (m) {
+  var name = m[0], lines = m[1], short = m[2], detail = m[3];
+  var d = document.createElement("div");
+  d.className = "card";
+  d.innerHTML = '<span class="n">' + lines + ' lines</span><h4>' + name + "</h4><p>" + short + "</p>";
+  d.addEventListener("click", function () {
+    document.getElementById("dlg-t").textContent = "app/src/netraid/" + name;
+    document.getElementById("dlg-b").innerHTML = "<p>" + short + "</p><p>" + detail + "</p>";
+    document.getElementById("dlg").showModal();
+  });
+  grid.appendChild(d);
+});
+
+document.getElementById("dlg-x").addEventListener("click", function () {
+  document.getElementById("dlg").close();
+});
+
+var buttons = document.querySelectorAll("nav button");
+Array.prototype.forEach.call(buttons, function (b) {
+  b.addEventListener("click", function () {
+    Array.prototype.forEach.call(buttons, function (x) { x.classList.remove("on"); });
+    Array.prototype.forEach.call(document.querySelectorAll("section"), function (x) {
+      x.classList.remove("on");
+    });
+    b.classList.add("on");
+    document.getElementById(b.dataset.t).classList.add("on");
+    window.scrollTo(0, 0);
+  });
+});
+</script>
+</body>
+</html>

@@ -20,16 +20,16 @@ flowchart TB
     end
 
     subgraph core ["NetraID core (TypeScript + JSI worklets)"]
-        direction LR
-        FP["Frame processor<br/>runs on every camera frame, off the JS thread"]
-        D1["1. Detect<br/>BlazeFace, bbox + 6 keypoints"]
-        D2["2. Landmarks<br/>FaceLandmarker, 468 points, EAR / MAR / yaw"]
-        D3["3. Liveness gate<br/>active: challenge FSM, random order<br/>passive: MiniFASNet"]
-        D4["4. Align<br/>5-point similarity transform to 112x112"]
-        D5["5. Embed<br/>MobileFaceNet, 512-d vector"]
-        D6["6. Match<br/>cosine against enrolled templates"]
-        FP --> D1 --> D2 --> D3
-        D3 --> D4 --> D5 --> D6
+        direction TB
+        subgraph stage1 [" "]
+            direction LR
+            FP["Frame processor<br/>runs on every camera frame,<br/>off the JS thread"] --> D1["1. Detect<br/>BlazeFace<br/>bbox + 6 keypoints"] --> D2["2. Landmarks<br/>FaceLandmarker, 468 points<br/>EAR / MAR / yaw"]
+        end
+        subgraph stage2 [" "]
+            direction LR
+            D3["3. Liveness gate<br/>active: challenge FSM, random order<br/>passive: MiniFASNet"] --> D4["4. Align<br/>5-point similarity<br/>transform to 112x112"] --> D5["5. Embed<br/>MobileFaceNet<br/>512-d vector"] --> D6["6. Match<br/>cosine against<br/>enrolled templates"]
+        end
+        D2 --> D3
     end
 
     STORE["Encrypted store, op-sqlite + SQLCipher<br/>templates as embeddings only<br/>attendance sync queue"]
