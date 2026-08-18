@@ -4,3 +4,61 @@ extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autoli
 rootProject.name = 'netraid'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
+
+/**
+ * Stage every module's native (CMake/ninja) build at a short absolute path on
+ * Windows.
+ *
+ * Windows caps path APIs at 260 characters for files and 248 for directory
+ * creation, and a stock React Native 0.76 project passes both limits on its own
+ * from a normally-nested checkout. Two distinct failures come out of that, and
+ * neither error message mentions path length:
+ *
+ *   1. In :app, the codegen object path for an autolinked module reaches 306
+ *      characters and ninja reports
+ *      "mkdir(RNVisionCameraResizePluginSpec_autolinked_build/...): No such
+ *      file or directory", which reads like missing state.
+ *
+ *   2. In :react-native-vision-camera, ninja stats the prefab config of
+ *      react-native-worklets-core through the literal relative path it was
+ *      written with, "<abi>/../prefab/<abi>/...". For armeabi-v7a that string is
+ *      263 characters, so the stat fails, ninja treats the file as a
+ *      never-satisfiable input of build.ninja, and reports
+ *      "manifest 'build.ninja' still dirty after 100 tries". The same path for
+ *      arm64-v8a is 259 characters and builds cleanly, which is why the failure
+ *      looked ABI-specific and intermittent rather than structural.
+ *
+ * Cleaning fixes neither. Staging at a short root does, and it also makes the
+ * build independent of how deeply the repository was cloned, so an evaluator's
+ * checkout path can no longer break it.
+ *
+ * This has to be registered here rather than in the root build script: AGP
+ * reads buildStagingDirectory while configuring each module, and a
+ * `subprojects { }` hook already runs too late ("It is too late to set
+ * buildStagingDirectory"). `beforeProject` fires before any project script is
+ * evaluated.
+ *
+ * :app gets the shortest root because its object paths are the longest; library
+ * modules have ~80 characters of slack and keep readable directory names.
+ * Applied only on Windows, so macOS, Linux and CI keep the stock layout.
+ * Override with -PnetraidCxxRoot=<path>.
+ */
+def netraidCxxRoot = null
+if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+    def driveRoot = settingsDir.toPath().toAbsolutePath().getRoot().toString()
+    // Keyed by this checkout, so two clones on one drive cannot share a staging
+    // directory and invalidate each other's incremental state.
+    def key = Integer.toHexString(settingsDir.absolutePath.toLowerCase().hashCode())
+    netraidCxxRoot = new File(new File(driveRoot, 'nxb'), key)
+}
+if (netraidCxxRoot != null) {
+    gradle.beforeProject { p ->
+        if (p.hasProperty('netraidCxxRoot')) netraidCxxRoot = new File(p.property('netraidCxxRoot'))
+        p.plugins.withId('com.android.application') {
+            p.android.externalNativeBuild.cmake.buildStagingDirectory = netraidCxxRoot
+        }
+        p.plugins.withId('com.android.library') {
+            p.android.externalNativeBuild.cmake.buildStagingDirectory = new File(netraidCxxRoot, p.name)
+        }
+    }
+}

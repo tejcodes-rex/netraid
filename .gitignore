@@ -37,5 +37,16 @@ ml/minivision/
 # All generated model artifacts (reproducible via ml/scripts)
 ml/models/
 
+# Working material, not part of the deliverable
+GRAND FINALE/
+deck/
+submission/
+tools/
+web/
+ignore/
+dist/
+docs/DEMO_RUNBOOK.md
+hackathon_doc7.pdf
+
 # Intermediate artifacts staged for the doc build tools
 build/

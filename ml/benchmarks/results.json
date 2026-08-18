@@ -1,0 +1,54 @@
+{
+  "sizes_mb": {
+    "FP32 ONNX (reference)": 13.62,
+    "TFLite float32": 13.63,
+    "TFLite int8": 3.64,
+    "TFLite float16": 6.83
+  },
+  "latency_ms_cpu": {
+    "FP32 ONNX (reference)": 13.06,
+    "TFLite float32": 74.32,
+    "TFLite int8": 4776.57
+  },
+  "fidelity_vs_fp32": {
+    "TFLite float32": {
+      "mean": 1.0,
+      "min": 1.0
+    },
+    "TFLite int8": {
+      "mean": 0.0,
+      "min": 0.0
+    }
+  },
+  "verification": {
+    "FP32 ONNX (reference)": {
+      "accuracy": 0.9976112092500401,
+      "threshold": 0.27,
+      "tar_at_far1e3": 0.9885900570497147,
+      "n_genuine": 9816,
+      "n_impostor": 40000,
+      "genuine_mean": 0.6116846203804016,
+      "impostor_mean": 0.01324792206287384
+    },
+    "TFLite float32": {
+      "accuracy": 0.9976112092500401,
+      "threshold": 0.27,
+      "tar_at_far1e3": 0.9885900570497147,
+      "n_genuine": 9816,
+      "n_impostor": 40000,
+      "genuine_mean": 0.6116846203804016,
+      "impostor_mean": 0.01324792206287384
+    },
+    "TFLite int8": {
+      "accuracy": 0.8029548739360848,
+      "threshold": 0.0050000000000000044,
+      "tar_at_far1e3": 1.0,
+      "n_genuine": 9816,
+      "n_impostor": 40000,
+      "genuine_mean": 0.0,
+      "impostor_mean": 0.0
+    }
+  },
+  "n_faces": 600,
+  "n_identities": 62
+}

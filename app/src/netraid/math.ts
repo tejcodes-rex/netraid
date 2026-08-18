@@ -83,6 +83,20 @@ export function median(xs: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
+/**
+ * The highest value that at least `k` of the samples reached, i.e. the k-th
+ * largest. Used where neither extreme is a safe summary: `consensus(xs, 2)`
+ * over three anti-spoof readings needs two frames to agree before it moves,
+ * so one lucky frame cannot carry an attack through and one noisy frame cannot
+ * reject a real person. Falls back to the smallest value when k exceeds the
+ * sample count.
+ */
+export function consensus(xs: number[], k: number): number {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => b - a);
+  return s[Math.min(k, s.length) - 1];
+}
+
 /** Horizontal flip of a square uint8 RGB (HWC) image, for flip-TTA embedding. */
 export function mirrorRGB(rgb: Uint8Array, size: number): Uint8Array {
   const out = new Uint8Array(rgb.length);

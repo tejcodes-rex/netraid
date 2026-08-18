@@ -5,7 +5,10 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   Camera, useCameraDevice, useCameraPermission,
 } from 'react-native-vision-camera';
-import { NetraID, DuplicateFaceError, type Challenge, type CapturedFace } from '../netraid';
+import {
+  NetraID, DuplicateFaceError, SpoofedEnrollmentError,
+  type Challenge, type CapturedFace,
+} from '../netraid';
 import { useRecognitionModel } from '../netraid/recognition';
 import { useNetraFrameProcessor } from '../netraid/frameProcessor';
 import { randomChallenges } from '../netraid/liveness';
@@ -32,8 +35,11 @@ export function EnrollScreen({ navigation }: { navigation: any }) {
   const isFocused = useIsFocused();
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   useRecognitionModel(); // loads the embedder via the reliable hook path
-  // Enrollment needs a clean face shot, not a liveness gesture (liveness is
-  // enforced at verification). With no challenges, the frame processor emits a
+  // Enrollment needs a clean, frontal face shot rather than a gesture sequence,
+  // so no active challenge runs here. The PASSIVE anti-spoof barrier is still
+  // enforced, inside enroll(): a template built from a photograph would make
+  // every later verification against it meaningless. With no challenges, the
+  // frame processor emits a
   // capture as soon as a well-framed face is present.
   const challenges = useMemo<Challenge[]>(() => [], []);
 
@@ -51,11 +57,11 @@ export function EnrollScreen({ navigation }: { navigation: any }) {
       if (m.indexOf('FIT ') === 0) setFit(parseInt(m.slice(4), 10) || 0);
       else if (m.indexOf('ear=') >= 0) setFit(100);
     },
-    onCapture: (rgb, passiveScore, sharpness) => {
+    onCapture: (rgb, passiveScore, passiveScreen, sharpness) => {
       setCaptures((prev) =>
         prev.length >= SHOTS
           ? prev
-          : [...prev, { rgb, livenessActivePassed: true, completedChallenges: challenges, passiveScore, sharpness }],
+          : [...prev, { rgb, livenessActivePassed: true, completedChallenges: challenges, passiveScore, passiveScreen, sharpness }],
       );
     },
   }, attempt, done || captures.length >= SHOTS);
@@ -76,6 +82,11 @@ export function EnrollScreen({ navigation }: { navigation: any }) {
     } catch (e) {
       if (e instanceof DuplicateFaceError) {
         setStatus(`Save failed: this face is already enrolled as ${e.existingPersonId}`);
+      } else if (e instanceof SpoofedEnrollmentError) {
+        setStatus(
+          'Save failed: these frames did not read as a live face. Enroll the person ' +
+          'directly, not from a photo or a screen.',
+        );
       } else {
         setStatus('Save failed: ' + String(e));
       }

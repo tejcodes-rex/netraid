@@ -1,0 +1,23 @@
+# NetraID, ML conversion & benchmarking pipeline
+# Python 3.10-3.12
+
+# Core
+numpy>=1.24
+pillow>=10.0
+requests>=2.31
+tqdm>=4.66
+
+# ONNX runtime (run/verify the original models, produce reference embeddings)
+onnx>=1.15
+onnxruntime>=1.17
+
+# TFLite conversion (ONNX -> TF SavedModel -> TFLite int8)
+# onnx2tf is the modern, reliable converter (handles NCHW->NHWC correctly).
+# It pulls in tensorflow, onnx-graphsurgeon, sng4onnx, etc.
+onnx2tf>=1.20
+tensorflow>=2.16 ; platform_system != "Darwin"
+tensorflow-macos>=2.16 ; platform_system == "Darwin"
+tf-keras>=2.16          # onnx2tf/TF2.16 compatibility shim
+
+# Optional: face alignment / detection for building the calibration set
+opencv-python>=4.9

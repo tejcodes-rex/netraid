@@ -13,39 +13,33 @@ NetraID is a **self-contained React Native module** (`@netraid/face-auth`) that 
 Datalake 3.0 app mounts as a screen/component. All AI runs **on-device**; the network is
 used only for opportunistic sync. Nothing about authentication blocks on connectivity.
 
-```
-┌──────────────────────────── React Native (Datalake 3.0) ────────────────────────────┐
-│                                                                                      │
-│  <NetraIDEnroll/>            <NetraIDVerify/>            Datalake business screens     │
-│        │                          │                                                   │
-│        ▼                          ▼                                                   │
-│  ┌───────────────────────────────────────────────────────────────────────────────┐ │
-│  │                       NetraID Core (TypeScript + JSI)                            │ │
-│  │                                                                                 │ │
-│  │  CameraController ──► FrameProcessor (worklet, runs on every frame)              │ │
-│  │   (vision-camera)        │                                                       │ │
-│  │                          ▼                                                       │ │
-│  │   1) Detect  ─ BlazeFace.tflite ──► bbox + 6 keypoints                           │ │
-│  │   2) Landmarks ─ FaceLandmarker.tflite ──► 468 mesh pts (EAR/MAR/yaw)            │ │
-│  │   3) Liveness gate:                                                              │ │
-│  │        active  : challenge FSM (blink → turn → smile), random order             │ │
-│  │        passive : MiniFASNet.tflite (print/replay)                               │ │
-│  │   4) Align  ─ 5-pt similarity transform ──► 112×112 RGB                          │ │
-│  │   5) Embed  ─ MobileFaceNet_f32.tflite ──► 512-d vector (fast-tflite)            │ │
-│  │   6) Match  ─ cosine vs enrolled templates (encrypted SQLite)                    │ │
-│  └───────────────────────────────────────────────────────────────────────────────┘ │
-│        │                                  │                                            │
-│        ▼                                  ▼                                            │
-│  Encrypted store (op-sqlite/SQLCipher): templates + attendance sync queue              │
-│  - templates (embeddings only)           - pending attendance events                   │
-│  - keys in Keystore/Keychain             - flushed on reconnect, then purged           │
-└──────────────────────────────────────────┼──────────────────────────────────────────┘
-                                            │ NetInfo: isInternetReachable
-                                            ▼
-              AWS (ap-south-1): API Gateway (JWT) → Lambda → DynamoDB + S3(SSE-KMS)
-                                            │
-                                            ▼  on confirmed ACK
-                                   PURGE local synced PII
+```mermaid
+flowchart TB
+    subgraph host ["React Native host app (Datalake 3.0)"]
+        UI["&lt;NetraIDEnroll /&gt; and &lt;NetraIDVerify /&gt;<br/>Datalake business screens"]
+    end
+
+    subgraph core ["NetraID core (TypeScript + JSI worklets)"]
+        direction LR
+        FP["Frame processor<br/>runs on every camera frame, off the JS thread"]
+        D1["1. Detect<br/>BlazeFace, bbox + 6 keypoints"]
+        D2["2. Landmarks<br/>FaceLandmarker, 468 points, EAR / MAR / yaw"]
+        D3["3. Liveness gate<br/>active: challenge FSM, random order<br/>passive: MiniFASNet"]
+        D4["4. Align<br/>5-point similarity transform to 112x112"]
+        D5["5. Embed<br/>MobileFaceNet, 512-d vector"]
+        D6["6. Match<br/>cosine against enrolled templates"]
+        FP --> D1 --> D2 --> D3
+        D3 --> D4 --> D5 --> D6
+    end
+
+    STORE["Encrypted store, op-sqlite + SQLCipher<br/>templates as embeddings only<br/>attendance sync queue"]
+    CLOUD["AWS ap-south-1<br/>API Gateway (JWT), Lambda, DynamoDB, S3 (SSE-KMS)"]
+    PURGE["Local synced records purged"]
+
+    UI --> FP
+    D6 --> STORE
+    STORE -. "NetInfo: isInternetReachable" .-> CLOUD
+    CLOUD -. "on confirmed acknowledgement" .-> PURGE
 ```
 
 ## 2. The pipeline, step by step

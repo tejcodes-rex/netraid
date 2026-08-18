@@ -3,11 +3,16 @@
 Minimal, serverless, India-region backend that receives attendance events the
 device captured **offline** and stored encrypted, then lets the device purge them.
 
-```
-RN device ──Bearer JWT──► API Gateway (HTTP API) ──► Lambda (sync.js) ──► DynamoDB
-   (encrypted local queue)        Cognito authorizer       idempotent upsert (by UUID)
-        ▲                                                          │
-        └──────── on {status:'ok'} per record → PURGE local ◄──────┘
+```mermaid
+flowchart LR
+    DEV["React Native device<br/>encrypted local queue"]
+    APIGW["API Gateway, HTTP API<br/>Cognito authorizer"]
+    FN["Lambda, sync.js<br/>idempotent upsert by UUID"]
+    DDB[("DynamoDB")]
+
+    DEV -- "Bearer JWT" --> APIGW --> FN --> DDB
+    FN -. "status: ok, per record" .-> DEV
+    DEV -. "purge local record" .-> DEV
 ```
 
 ## Why it's safe to purge

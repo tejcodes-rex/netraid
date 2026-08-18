@@ -22,24 +22,21 @@ NHAI field personnel work in **zero-network zones**, remote highway stretches, t
 
 **NetraID** is a drop-in React Native module that runs a **MobileFaceNet** embedding model + **multi-factor offline liveness** entirely on-device (**< 20 MB**, **< 1 s**, **> 95 %** accuracy, **no network**), hardens every verdict with a **multi-frame, flip-TTA, margin-checked accuracy engine**, stores only **encrypted face embeddings** (never raw photos), and **syncs-then-purges** to AWS the moment connectivity returns.
 
-```
-        ┌──────────────────────── ON DEVICE (offline) ────────────────────────┐
-        │                                                                      │
-  Camera frame ─▶ Face Detect ─▶ Align/Crop ─▶ MobileFaceNet ─▶ 512-d embedding │
- (vision-camera)   (BlazeFace)     (112×112)    (TFLite fp32)         │         │
-        │                                                              ▼        │
-        │   Liveness gate (must pass BEFORE match):              Cosine match   │
-        │   ① Active challenge: blink / smile / head-turn         vs enrolled   │
-        │      (Face Mesh → EAR / MAR / yaw)                      templates     │
-        │   ② Passive anti-spoof: MiniFASNet (print/screen)      (encrypted)   │
-        │                                                              │        │
-        │                                  ✅ Authenticated ───────────┘        │
-        │                                  Attendance record → local queue      │
-        └───────────────────────────────────────────┬──────────────────────────┘
-                                                     │  (network restored)
-                                                     ▼
-                          AWS: API Gateway → Lambda → DynamoDB / S3
-                          then  →  LOCAL PII PURGED
+```mermaid
+flowchart LR
+    subgraph device ["On device, no network required"]
+        direction LR
+        A["Capture<br/>vision-camera"]
+        B["Detect + landmarks<br/>BlazeFace 0.23 MB<br/>FaceLandmarker 2.55 MB"]
+        C["Liveness gate<br/>active challenge, random order<br/>MiniFASNet 1.68 MB"]
+        D["Align + embed<br/>112x112, MobileFaceNet 13.6 MB<br/>512-d vector"]
+        E["Match<br/>cosine vs enrolled"]
+        F["Encrypted store, SQLCipher<br/>embeddings only<br/>attendance sync queue"]
+        A --> B --> C --> D --> E --> F
+    end
+
+    F -. "network restored" .-> G["API Gateway, Lambda, DynamoDB<br/>ap-south-1"]
+    G -. "acknowledged" .-> H["Local records purged"]
 ```
 
 ## 3. How we hit every hard requirement
@@ -49,11 +46,11 @@ NHAI field personnel work in **zero-network zones**, remote highway stretches, t
 | 1 | React Native, Android **+** iOS | `react-native-vision-camera` frame processors + `react-native-fast-tflite` (NNAPI / Core ML / GPU delegates) | One codebase, both OSes |
 | 2 | Model **~20 MB** (smaller better) | MobileFaceNet float32 (**13.6 MB**) + FaceLandmarker (**2.55 MB**) + BlazeFace (**0.23 MB**) + MiniFASNet (**1.68 MB**) | **≈ 17.3 MB total** |
 | 3 | **< 1 s** recognize + liveness | CPU-delegate inference, pipelined frame processor | **371-457 ms** for the full 3-frame verify verdict; **284 ms** avg single-face pipeline (Vivo V2246) |
-| 4 | Android 8+, iOS 12+, 3 GB RAM, no high-end GPU | float32 CPU delegate, no GPU required | ✅ runs on the 3 GB-class Vivo |
+| 4 | Android 8+, iOS 12+, 3 GB RAM, no high-end GPU | float32 CPU delegate, no GPU required | Runs on the 3 GB-class Vivo |
 | 5 | **> 95 %** accuracy, Indian demographics, harsh/low light | ArcFace-trained MobileFaceNet (99.76 % LFW) + multi-frame median verdict, flip-TTA, margin rule, quality gates, adaptive dim-light gain | on-device genuine aggregate **0.89-0.90** vs impostor ≈ **0.03** |
 | 6 | **Open-source only**, share source | MobileFaceNet (MIT), MediaPipe (Apache-2.0), MiniFASNet (Apache-2.0), all RN libs MIT | Zero extra licenses |
 | 7 | Offline liveness (blink/smile/turn) | Two calibrated layers: strict active challenge FSM (mandatory blink, motion-stability gate, anti-replay timeouts) + MiniFASNet passive gate (threshold set from measured live-vs-screen scores on the target device) | A laptop-screen replay of the enrolled user is rejected (measured) |
-| 8 | Sync to AWS + **purge** local | NetInfo-triggered queue flush → serverless ingest → local purge | ✅ |
+| 8 | Sync to AWS + **purge** local | NetInfo-triggered queue flush → serverless ingest → local purge | Met |
 
 > OS floor note: Android target is `minSdkVersion 26` (Android 8.0), exactly the brief. The recognition and liveness logic and the int8 models run on iOS 12, but the practical iOS floor is set by the host React Native toolchain. This reference app uses RN 0.76 (Xcode floor iOS 15.1) and vision-camera v4 (iOS 13+). For an iOS 12 device target, embed the module in a Datalake host on an RN version with that floor (for example RN 0.71). See `docs/INTEGRATION.md` §3.
 
@@ -70,24 +67,24 @@ NHAI field personnel work in **zero-network zones**, remote highway stretches, t
 
 ```
 netraid/
-├── README.md                 ← master overview
-├── app/                      ← React Native cross-platform app + NetraID module
-│   ├── src/netraid/          ← detection, alignment, embedding, liveness, matching, store, sync
-│   ├── src/screens/          ← Home, Enroll, Verify, Pipeline Demo
-│   ├── assets/models/        ← the 4 on-device .tflite models (~17.3 MB)
-│   ├── android/  ios/        ← native shells (minSdkVersion 26 / iOS project)
-│   └── src/netraid/__tests__ ← executable tests for the core algorithms
+├── README.md                  # master overview
+├── app/                       # React Native cross-platform app + NetraID module
+│   ├── src/netraid/           # detection, alignment, embedding, liveness, matching, store, sync
+│   ├── src/screens/           # Home, Enroll, Verify, Pipeline Demo
+│   ├── assets/models/         # the 4 on-device .tflite models (~17.3 MB)
+│   ├── android/  ios/         # native shells (minSdkVersion 26 / iOS project)
+│   └── src/netraid/__tests__  # executable tests for the core algorithms
 ├── docs/
-│   ├── ARCHITECTURE.md       ← full technical architecture and decisions
-│   ├── MODEL_PIPELINE.md     ← model selection, conversion, quantization
-│   ├── LIVENESS.md           ← anti-spoofing design (active + passive) + math
-│   ├── INTEGRATION.md        ← step-by-step Datalake 3.0 integration guide
-│   ├── SECURITY_PRIVACY.md   ← biometric template protection, DPDP Act 2023
-│   ├── BENCHMARKS.md         ← measured size / speed / accuracy results
-│   ├── COMPLIANCE.md         ← per-requirement mapping to the brief
-│   └── BUILD.md  ROADMAP.md  ← build record + forward-looking pilot work
-├── backend/                  ← AWS serverless sync (IaC + Lambdas)
-└── .github/workflows/        ← iOS build + simulator demo (cross-platform evidence)
+│   ├── ARCHITECTURE.md        # full technical architecture and decisions
+│   ├── MODEL_PIPELINE.md      # model selection, conversion, quantization
+│   ├── LIVENESS.md            # anti-spoofing design (active + passive) + math
+│   ├── INTEGRATION.md         # step-by-step Datalake 3.0 integration guide
+│   ├── SECURITY_PRIVACY.md    # biometric template protection, DPDP Act 2023
+│   ├── BENCHMARKS.md          # measured size / speed / accuracy results
+│   ├── COMPLIANCE.md          # per-requirement mapping to the brief
+│   └── BUILD.md  ROADMAP.md   # build record + forward-looking pilot work
+├── backend/                   # AWS serverless sync (IaC + Lambdas)
+└── .github/workflows/         # iOS build + simulator demo (cross-platform evidence)
 ```
 
 ## 6. Quick start
@@ -110,7 +107,3 @@ in `docs/INTEGRATION.md`.
 - **Backend** (`backend/`): serverless sync (API Gateway + Lambda + DynamoDB) as IaC.
 
 A per-requirement mapping to the brief is in `docs/COMPLIANCE.md`. The forward-looking pilot work (India-representative recalibration set, on-device latency capture) is tracked in `docs/ROADMAP.md`.
-
----
-
-*Built for the NHAI Innovation Hackathon 7.0 · Contact: pranjalgupta@nhai.org (organizer)*

@@ -93,6 +93,24 @@ android {
             keyPassword 'android'
         }
     }
+    /**
+     * One APK per ABI, plus a universal one.
+     *
+     * A single universal APK carries four copies of every native library and
+     * lands at ~132 MB, which misrepresents a solution whose on-device model
+     * footprint is 17.3 MB. Per-ABI outputs are ~54 MB each: install
+     * `app-arm64-v8a-release.apk` on any modern handset, `app-x86_64-release.apk`
+     * in an emulator. The universal build stays available for anyone who would
+     * rather install one file without checking the target's ABI first.
+     */
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            universalApk true
+        }
+    }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug

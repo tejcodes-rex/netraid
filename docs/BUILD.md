@@ -50,9 +50,34 @@ cd app/android
 ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
 # Standalone release (self-contained, offline, models + JS bundled):
 ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+# Release for every supported ABI (this is what ships):
+./gradlew assembleRelease
 ```
 
 Outputs land in `app/android/app/build/outputs/apk/{debug,release}/`.
+
+### Building on Windows
+
+Nothing extra to do: the native build stages itself at a short path
+automatically. What follows is the reason, because the failures it prevents are
+badly misreported and cost real time to diagnose.
+
+Windows caps path APIs at **260 characters** for files and **248** for creating
+a directory. A stock React Native 0.76 project passes both on its own from a
+normally nested checkout, and produces two different errors, neither of which
+mentions path length:
+
+| Symptom | Actual cause |
+|---|---|
+| `ninja: error: mkdir(RNVisionCameraResizePluginSpec_autolinked_build/...): No such file or directory` | The codegen object path for an autolinked module reaches **306** characters. Reads like missing state; is not. |
+| `ninja: error: manifest 'build.ninja' still dirty after 100 tries`, only for `armeabi-v7a` | ninja checks a prefab config through the literal relative path `<abi>/../prefab/<abi>/...`. For `armeabi-v7a` that string is **263** characters so the check fails, and ninja treats the file as an input to `build.ninja` it can never satisfy. The same path for `arm64-v8a` is **259** and builds cleanly, which is why the failure looks ABI-specific and intermittent. |
+
+Cleaning fixes neither, and repeated cleaning makes the second one look like
+corrupted state. `app/android/settings.gradle` stages every module's native
+build under `<drive>:\nxb\<checkout-key>` on Windows, which puts every
+generated path back inside the limit and, usefully, makes the build independent
+of how deeply the repository was cloned. macOS, Linux and CI keep the stock
+layout. Override the location with `-PnetraidCxxRoot=<path>`.
 
 ## Deploy to a phone
 

@@ -11,8 +11,9 @@
 
 import { loadRecognitionModel, embedTTA, isLoaded } from './recognition';
 import { initStore, saveTemplate, loadTemplates, insertAttendance } from './store';
-import { robustAverage, bestMatch, aggregateMatches, cosine } from './math';
-import { decideLiveness } from './liveness';
+import { robustAverage, bestMatch, aggregateMatches, cosine, median, consensus } from './math';
+import { decideLiveness, enrollGatePassed } from './liveness';
+import type { ChromaVerdict } from './chroma';
 import { startSync } from './sync';
 import { getDeviceId } from './keys';
 import uuid from 'react-native-uuid';
@@ -23,6 +24,7 @@ import {
   type LivenessResult,
   type Challenge,
 } from './types';
+import { logCalibration, r4 } from './calibration';
 
 let config: NetraIDConfig = DEFAULT_CONFIG;
 let initPromise: Promise<void> | null = null;
@@ -34,6 +36,20 @@ export class DuplicateFaceError extends Error {
   constructor(public readonly existingPersonId: string, score: number) {
     super(`Face already enrolled as ${existingPersonId} (similarity ${score.toFixed(2)})`);
     this.name = 'DuplicateFaceError';
+  }
+}
+
+/** Thrown when the frames offered for enrollment do not read as a live face.
+ * Enrollment is the root of trust: a template built from a photograph or a
+ * screen makes every later verification against it meaningless, and no amount
+ * of liveness at verification time can repair it. The floor is the same
+ * device-calibrated P(real) statistic the verification path uses. */
+export class SpoofedEnrollmentError extends Error {
+  constructor(public readonly passiveScore: number) {
+    super(
+      `Enrollment frames did not read as a live face (anti-spoof ${passiveScore.toFixed(2)})`,
+    );
+    this.name = 'SpoofedEnrollmentError';
   }
 }
 
@@ -49,7 +65,10 @@ export interface CapturedFace {
   rgb: Uint8Array;
   livenessActivePassed: boolean;
   completedChallenges: Challenge[];
+  /** MiniFASNet P(real) for this capture. */
   passiveScore: number;
+  /** MiniFASNet P(screen-replay) for this capture. */
+  passiveScreen: number;
   /** Laplacian-variance sharpness of the crop (see quality.ts). */
   sharpness: number;
 }
@@ -82,6 +101,35 @@ async function enroll(args: {
   if (!isLoaded()) await loadRecognitionModel(); // load on demand if init raced
   const bySharpness = [...args.captures].sort((a, b) => b.sharpness - a.sharpness);
   const keep = bySharpness.slice(0, Math.max(3, Math.ceil(bySharpness.length * 0.8)));
+  // Anti-spoof at the ROOT OF TRUST. Enrollment previously ran with no liveness
+  // barrier at all, so a photograph held to the lens could become an identity.
+  // The median is used for the same reason as at verification: one fortunate
+  // frame must not carry a print through, and one noisy frame must not reject a
+  // real person.
+  //
+  // Whether that median REJECTS is governed by `enrollSpoofMode`, which ships as
+  // `report`: the enrollment burst is a different capture distribution from the
+  // verification one, so the verify threshold is not evidence about it. The
+  // reading is recorded on every save either way, which is what lets the gate be
+  // armed later against numbers measured on this path. See docs/CALIBRATION.md.
+  const passive = median(keep.map((c) => c.passiveScore));
+  const gateOk = enrollGatePassed(
+    passive, config.enrollSpoofMode, config.enrollPassiveThreshold,
+  );
+  if (config.enrollSpoofMode !== 'off') {
+    logCalibration({
+      stage: 'enroll',
+      outcome: gateOk ? 'accept' : 'reject',
+      mode: config.enrollSpoofMode,
+      passiveMedian: r4(passive),
+      real: keep.map((c) => r4(c.passiveScore)),
+      screen: keep.map((c) => r4(c.passiveScreen)),
+      sharp: keep.map((c) => Math.round(c.sharpness)),
+      shots: keep.length,
+    });
+  }
+  if (!gateOk) throw new SpoofedEnrollmentError(passive);
+
   const embs = keep.map((c) => embedTTA(c.rgb));
   const template = robustAverage(embs);
   if (__DEV__) {
@@ -113,16 +161,26 @@ async function enroll(args: {
 async function verify(args: {
   captures: CapturedFace[];
   requireLiveness?: boolean;
+  /** Result of the screen-illumination challenge for this session, when the
+   * host screen ran one. Omitted means the challenge did not run, which is
+   * never treated as evidence of an attack. */
+  chroma?: ChromaVerdict | null;
 }): Promise<VerifyResult> {
   const t0 = Date.now();
   const { captures } = args;
   if (!isLoaded()) await loadRecognitionModel(); // load on demand if init raced
 
   const first = captures[0];
+  // Median P(real), and the screen-replay score at least two captures agreed
+  // on. Neither statistic can be swung by a single frame, in either direction:
+  // one lucky frame cannot carry a replay through, and one noisy frame cannot
+  // reject a real person. See decideLiveness.
   const liveness: LivenessResult = decideLiveness(
     first.livenessActivePassed,
     first.completedChallenges,
-    Math.max(...captures.map((c) => c.passiveScore)),
+    median(captures.map((c) => c.passiveScore)),
+    consensus(captures.map((c) => c.passiveScreen), 2),
+    args.chroma ?? null,
     config,
   );
   if ((args.requireLiveness ?? true) && !liveness.passed) {
@@ -137,7 +195,7 @@ async function verify(args: {
     console.log(
       '[verify] frames=' +
         perFrame.map((m, i) =>
-          `${m.personId || '-'}:${m.score.toFixed(3)}(2nd ${m.secondScore.toFixed(2)}, sharp ${captures[i].sharpness.toFixed(0)}, live ${captures[i].passiveScore.toFixed(3)})`,
+          `${m.personId || '-'}:${m.score.toFixed(3)}(2nd ${m.secondScore.toFixed(2)}, sharp ${captures[i].sharpness.toFixed(0)}, live ${captures[i].passiveScore.toFixed(3)}, scr ${captures[i].passiveScreen.toFixed(3)})`,
         ).join(' ') +
         ` -> ${match.personId || 'NONE'}:${match.score.toFixed(3)} in ${Date.now() - t0}ms`,
     );
