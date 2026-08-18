@@ -46,7 +46,7 @@ flowchart TB
 NetraID itself is **MIT licensed** (see [`LICENSE`](LICENSE)), so it can be embedded in
 Datalake 3.0, modified and redistributed without restriction. Every component it depends on
 is MIT, Apache-2.0 or BSD. Nothing here carries a commercial licence, a runtime fee, or a
-per-device cost, and `LICENSE` lists each third-party component and its licence.
+per-device cost, and [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists each third-party component with its licence.
 
 | Layer | Choice | Version | Licence | Why this one |
 |---|---|---|---|---|
