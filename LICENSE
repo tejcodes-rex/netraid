@@ -1,0 +1,62 @@
+MIT License
+
+Copyright (c) 2026 Tejas Mane
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+THIRD-PARTY COMPONENTS
+
+NetraID bundles or depends on the components below. Every one is permissively
+licensed, and none requires a commercial licence, a runtime fee or a per-device
+cost. Their licence texts ship with the packages themselves.
+
+On-device models, bundled in app/assets/models:
+
+  BlazeFace (short range)        Apache-2.0   Google MediaPipe
+  FaceLandmarker                 Apache-2.0   Google MediaPipe
+  MiniFASNet V2                  Apache-2.0   minivision-ai, Silent-Face-Anti-Spoofing
+  MobileFaceNet (ArcFace)        MIT          InsightFace model zoo
+
+Runtime dependencies:
+
+  react-native                   MIT          Meta
+  react-native-vision-camera     MIT          Marc Rousavy
+  react-native-worklets-core     MIT          Marc Rousavy
+  vision-camera-resize-plugin    MIT          Marc Rousavy
+  react-native-fast-tflite       MIT          Marc Rousavy
+  @op-engineering/op-sqlite      MIT          OP Engineering
+  SQLCipher                      BSD-3-Clause Zetetic LLC
+  react-native-keychain          MIT          Oblador
+  @react-native-community/netinfo MIT         React Native Community
+  @react-navigation/native       MIT          React Navigation
+  react-native-safe-area-context MIT          Th3rd Wave
+  react-native-uuid              MIT          Eugene Hauptmann
+
+Model conversion toolchain, ml/scripts, not shipped in the app:
+
+  PyTorch                        BSD-3-Clause
+  ONNX                           Apache-2.0
+  onnx2tf                        MIT
+  TensorFlow / LiteRT            Apache-2.0
+
+EdgeFace was evaluated for face recognition and rejected: it scores higher than
+MobileFaceNet but its licence prohibits commercial use, which would have made
+this solution unusable for a public deployment.

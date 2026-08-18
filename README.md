@@ -8,7 +8,7 @@
 [![Framework](https://img.shields.io/badge/framework-React%20Native-61dafb)]()
 [![Inference](https://img.shields.io/badge/inference-100%25%20offline-green)]()
 [![Model size](https://img.shields.io/badge/model-%3C20MB-success)]()
-[![License](https://img.shields.io/badge/license-100%25%20open--source-brightgreen)]()
+[![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 
 ---
 
@@ -43,8 +43,10 @@ flowchart TB
 
 ## 3. Technology stack
 
-Every component is MIT or Apache-2.0. Nothing here carries a commercial licence, a runtime
-fee, or a per-device cost.
+NetraID itself is **MIT licensed** (see [`LICENSE`](LICENSE)), so it can be embedded in
+Datalake 3.0, modified and redistributed without restriction. Every component it depends on
+is MIT, Apache-2.0 or BSD. Nothing here carries a commercial licence, a runtime fee, or a
+per-device cost, and `LICENSE` lists each third-party component and its licence.
 
 | Layer | Choice | Version | Licence | Why this one |
 |---|---|---|---|---|
