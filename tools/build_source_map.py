@@ -69,11 +69,14 @@ SECTION = """<section id="deps">
   <p class="sub">Generated from the actual <code>import</code> statements in the shipped source rather than drawn by
   hand: 22 modules, 47 edges. <strong>Click any module</strong> to isolate it and see exactly what it imports and what
   imports it.</p>
-  <div class="dep-tools">
-    <button id="dep-reset" class="btn">Show everything</button>
-    <span id="dep-status" class="dim-note">Nothing selected</span>
+  <div class="dep-stage" id="dep-stage">
+    <div class="dep-tools">
+      <button id="dep-reset" class="btn">Show everything</button>
+      <button id="dep-full" class="btn">Full screen</button>
+      <span id="dep-status" class="dim-note">Nothing selected</span>
+    </div>
+    <div class="dep-wrap">__SVG__</div>
   </div>
-  <div class="dep-wrap">__SVG__</div>
   <div id="dep-detail" class="dep-detail"></div>
   <div class="note">
     <strong>How to read it.</strong> An arrow from A to B means A imports B, so B knows nothing about A.
@@ -94,6 +97,12 @@ CSS = """  .dep-wrap{background:var(--panel2);border:1px solid var(--line);borde
     padding:6px 13px;font:inherit;font-size:13px;cursor:pointer}
   .btn:hover{border-color:var(--accent);color:var(--accent)}
   .dim-note{color:var(--dim);font-size:13px}
+  .dep-stage:fullscreen{background:var(--bg);padding:18px 22px;display:flex;
+    flex-direction:column;gap:10px}
+  .dep-stage:fullscreen .dep-wrap{flex:1;min-height:0;display:flex;align-items:center;
+    justify-content:center;overflow:auto;margin:0}
+  .dep-stage:-webkit-full-screen{background:var(--bg);padding:18px 22px;display:flex;
+    flex-direction:column;gap:10px}
   .dep-detail{margin:0 0 8px}
   .dep-detail table{margin:0}
   g.node{cursor:pointer}
@@ -175,11 +184,40 @@ var DEP_LABEL = __LABEL__;
     nodes[k].addEventListener("click", function () { select(k); });
   });
   document.getElementById("dep-reset").addEventListener("click", clearAll);
+
+  var wrap = document.getElementById("dep-stage");
+  var fsBtn = document.getElementById("dep-full");
+  function inFullscreen() {
+    return document.fullscreenElement === wrap || document.webkitFullscreenElement === wrap;
+  }
+  fsBtn.addEventListener("click", function () {
+    if (inFullscreen()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      var req = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+      if (req) { req.call(wrap); }
+    }
+  });
+  ["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      fsBtn.textContent = inFullscreen() ? "Exit full screen" : "Full screen";
+    });
+  });
 })();
 
 var buttons = document.querySelectorAll("nav button");"""
 
 s = io.open(PAGE, encoding="utf-8").read()
+
+# Idempotent: strip any previously injected graph so re-running cannot stack two
+# copies of a 90 KB SVG into the page.
+if '<section id="deps">' in s:
+    a = s.index('<section id="deps">')
+    b = s.index('<section id="flow">', a)
+    s = s[:a] + s[b:]
+    nav_old = chr(60) + 'button data-t="deps">Dependency graph</button>' + chr(10) + "  "
+    s = s.replace(nav_old, "", 1)
+    print("removed a previous graph section")
 
 assert '<button data-t="flow">Verification flow</button>' in s
 s = s.replace('<button data-t="flow">Verification flow</button>',
