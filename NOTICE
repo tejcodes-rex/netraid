@@ -1,0 +1,17 @@
+NetraID
+Copyright 2026 Tejas Mane
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this work except in compliance with the License. A copy of the License is in the
+LICENSE file at the root of this repository, and at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Section 4 of the License requires that this NOTICE be carried in any
+redistribution of this work or of any derivative work, and that modified files
+carry prominent notices stating that they were changed.
+
+Commercial integration, calibration on deployment hardware, and ongoing support
+for NetraID are available from the author.
+
+Third-party components and their licences are listed in THIRD-PARTY-NOTICES.md.

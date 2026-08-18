@@ -8,7 +8,7 @@
 [![Framework](https://img.shields.io/badge/framework-React%20Native-61dafb)]()
 [![Inference](https://img.shields.io/badge/inference-100%25%20offline-green)]()
 [![Model size](https://img.shields.io/badge/model-%3C20MB-success)]()
-[![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](LICENSE)
 
 ---
 
@@ -43,10 +43,15 @@ flowchart TB
 
 ## 3. Technology stack
 
-NetraID itself is **MIT licensed** (see [`LICENSE`](LICENSE)), so it can be embedded in
-Datalake 3.0, modified and redistributed without restriction. Every component it depends on
-is MIT, Apache-2.0 or BSD. Nothing here carries a commercial licence, a runtime fee, or a
-per-device cost, and [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists each third-party component with its licence.
+NetraID is released under the **Apache License 2.0** (see [`LICENSE`](LICENSE)). NHAI can
+deploy it, integrate it into Datalake 3.0 and modify it for its own use, with no licence fee
+and no per-device cost. The licence also carries an express patent grant, and requires that
+attribution and the [`NOTICE`](NOTICE) file be preserved in any redistribution.
+
+Every component it depends on is Apache-2.0, MIT or BSD; nothing in the stack requires an
+additional licence to be purchased. [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists
+each one. Commercial integration, calibration on deployment hardware and ongoing support are
+available from the author.
 
 | Layer | Choice | Version | Licence | Why this one |
 |---|---|---|---|---|

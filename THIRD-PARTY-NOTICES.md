@@ -1,6 +1,6 @@
 # Third-party components
 
-NetraID itself is MIT licensed; see [`LICENSE`](LICENSE).
+NetraID is released under the Apache License 2.0; see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
 It bundles or depends on the components below. Every one is permissively licensed,
 and none requires a commercial licence, a runtime fee or a per-device cost. Their
