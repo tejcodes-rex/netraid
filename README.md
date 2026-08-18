@@ -136,6 +136,10 @@ netraid/
 
 ## 8. Quick start
 
+To try the Android build on a handset, `docs/TESTING_GUIDE.md` is a short walkthrough of
+enrollment and verification, including what each quality gate is checking and why a capture
+may be refused.
+
 ```bash
 cd app && npm install
 npx react-native run-android      # or run-ios on a Mac
