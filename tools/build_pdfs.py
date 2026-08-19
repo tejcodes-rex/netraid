@@ -46,7 +46,10 @@ a{color:#0C7C49;text-decoration:none}
 .diagram{margin:14px 0;text-align:center;break-inside:avoid}
 .diagram svg{max-width:100%;height:auto}
 code{font-family:'IBM Plex Mono',monospace;background:#EAF3EE;padding:1px 5px;border-radius:4px;font-size:10.5px}
-pre{background:#0E1714;color:#E9F1ED;padding:12px 14px;border-radius:8px;overflow:auto;font-size:10px;line-height:1.45}
+pre{background:#0E1714;color:#E9F1ED;padding:12px 14px;border-radius:8px;font-size:10px;line-height:1.45;white-space:pre-wrap;word-break:break-word;break-inside:avoid}
+tr{break-inside:avoid}
+td,th{word-break:break-word;overflow-wrap:anywhere}
+table{table-layout:fixed}
 pre code{background:none;color:inherit;padding:0}
 table{border-collapse:collapse;width:100%;margin:10px 0;font-size:10.5px}
 th,td{border:1px solid #CBD8D1;padding:6px 9px;text-align:left;vertical-align:top}

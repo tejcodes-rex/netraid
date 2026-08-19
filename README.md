@@ -91,16 +91,7 @@ point the client at Datalake 3.0's own backend instead and delete it.
 
 > OS floor note: Android target is `minSdkVersion 26` (Android 8.0), exactly the brief. The recognition and liveness logic and the int8 models run on iOS 12, but the practical iOS floor is set by the host React Native toolchain. This reference app uses RN 0.76 (Xcode floor iOS 15.1) and vision-camera v4 (iOS 13+). For an iOS 12 device target, embed the module in a Datalake host on an RN version with that floor (for example RN 0.71). See `docs/INTEGRATION.md` §3.
 
-## 5. How we win each evaluation criterion (100 marks)
-
-| Criterion | Marks | Our differentiators |
-|---|---:|---|
-| **Innovation**, edge AI efficiency, compression, liveness | 30 | robust **float32** embedder chosen after real on-device testing (int8 produced NaN, fp16 stalled on mid-range hardware); ≈ 17 MB stack under the cap; **multi-frame + flip-TTA + margin accuracy engine with duplicate-face guard**; active-FSM liveness with timeout re-randomization (anti-replay); embeddings-only privacy design |
-| **Feasibility**, Datalake 3.0 integration, < 1 s on mid-range | 30 | Self-contained RN module with a clean `<NetraID/>` API; benchmarked on mid-range; drop-in `NetraIDModule` |
-| **Scalability & Sustainability**, sync/purge, lighting/demographics | 20 | Idempotent offline queue, signed device sync, calibration for Indian demographics + lighting augmentation |
-| **Presentation & Documentation**, code clarity, guides, deck | 20 | This repo + `docs/INTEGRATION.md` step-by-step + benchmark report + pitch deck |
-
-## 6. Interactive source map
+## 5. Interactive source map
 
 `docs/index.html` is a self-contained page that maps the codebase: what each module owns, the
 verification flow step by step, the four models with their input conventions, every configuration
@@ -110,7 +101,7 @@ It is one file with no external dependencies, so it opens offline by double-clic
 at **https://tejcodes-rex.github.io/netraid/** when GitHub Pages is enabled for this repository
 (Settings, Pages, source: `master` branch, `/docs` folder).
 
-## 7. Repository layout
+## 6. Repository layout
 
 ```
 netraid/
@@ -134,7 +125,7 @@ netraid/
 └── .github/workflows/         # iOS build + simulator demo (cross-platform evidence)
 ```
 
-## 8. Quick start
+## 7. Quick start
 
 To try the Android build on a handset, `docs/TESTING_GUIDE.md` is a short walkthrough of
 enrollment and verification, including what each quality gate is checking and why a capture
@@ -149,7 +140,7 @@ The four `.tflite` models are already in `app/assets/models/` and bundled into t
 so it runs fully offline out of the box. Full setup details (NDK, CocoaPods, signing) are
 in `docs/INTEGRATION.md`.
 
-## 9. What is built
+## 8. What is built
 
 - **On-device models** (`app/assets/models/`): BlazeFace, FaceLandmarker, MobileFaceNet float32, MiniFASNet float32, real `.tflite` files totalling ≈ 17.3 MB, bundled for fully offline use.
 - **React Native module** (`app/src/netraid/`): detection, alignment, embedding, liveness (strict active challenge FSM with mandatory blink, motion-stability gating and timeout re-randomization, plus a device-calibrated passive MiniFASNet gate), a **multi-frame accuracy engine** (3-frame median verdict, flip-TTA, sharpness/exposure/pose quality gates, camera warm-up, outlier-rejected 6-shot enrollment, best-vs-second margin rule, duplicate-face guard), encrypted SQLCipher storage, and offline-first sync/purge. Typechecks clean and the core algorithms pass an executable test suite (36 tests covering matching, aggregation, liveness math, alignment, imaging, and crop quality).

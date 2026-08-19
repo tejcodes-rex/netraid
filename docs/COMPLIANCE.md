@@ -58,18 +58,9 @@ set. This is called out honestly in `docs/BENCHMARKS.md` §6 rather than overcla
 
 ---
 
-## C. Evaluation criteria (100 marks), how the build addresses each
-
-| Criterion | Marks | How NetraID addresses it |
-|---|:---:|---|
-| Innovation, edge AI efficiency + compression + liveness | 30 | robust float32 embedder chosen after real on-device testing (int8 produced NaN, fp16 stalled the interpreter on mid-range hardware); whole stack ≈ 17 MB, under the 20 MB cap; layered anti-spoofing (mandatory-blink challenge FSM with a bounded reaction window, plus continuity binding between the liveness proof and the identity capture; MiniFASNet computed and reported, armed per deployment); multi-frame flip-TTA accuracy engine with duplicate-face guard; embeddings-only privacy model; 371-457 ms full multi-frame verdict on a real mid-range phone |
-| Feasibility, Datalake 3.0 integration + speed | 30 | Self-contained drop-in module with a 3-line API; install + integration guide in `docs/INTEGRATION.md`; no backend changes needed for the offline path; sub-second on-device budget shown in `docs/BENCHMARKS.md` |
-| Scalability and sustainability, sync/purge + lighting/demographics | 20 | Idempotent offline queue with server-confirmed purge and `VACUUM`; JWT-authenticated, India-region serverless backend; multi-shot enrollment and documented threshold recalibration for local demographics and lighting |
-| Presentation and documentation, code clarity + guides + pitch | 20 | This repo plus seven focused docs, a step-by-step integration guide, reproducible benchmarks, and a 10-slide deck, all exported to PDF in `dist/` |
-
 ---
 
-## D. What is measured vs what is pilot scope (stated honestly)
+## C. What is measured vs what is pilot scope (stated honestly)
 
 **Measured and reproducible:** model sizes, FP32 verification accuracy on LFW, TFLite
 conversion fidelity, on-device genuine-vs-impostor separation (≈ 0.84 vs ≈ 0.03), and
