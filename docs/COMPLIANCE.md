@@ -60,7 +60,7 @@ set. This is called out honestly in `docs/BENCHMARKS.md` §6 rather than overcla
 
 ---
 
-## C. What is measured vs what is pilot scope (stated honestly)
+## C. What is measured, and what is not
 
 **Measured and reproducible:** model sizes, FP32 verification accuracy on LFW, TFLite
 conversion fidelity, on-device genuine-vs-impostor separation (≈ 0.84 vs ≈ 0.03), and
@@ -71,4 +71,4 @@ conversion fidelity, on-device genuine-vs-impostor separation (≈ 0.84 vs ≈ 0
 - Acceptance threshold and liveness thresholds re-fit on an India-representative set.
 
 These are the standard last-mile steps for any biometric deployment and are tracked in
-`docs/ROADMAP.md`. Nothing on the offline recognition path depends on them to function.
+Nothing on the offline recognition path depends on them to function.

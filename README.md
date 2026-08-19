@@ -120,7 +120,7 @@ netraid/
 │   ├── SECURITY_PRIVACY.md    # biometric template protection, DPDP Act 2023
 │   ├── BENCHMARKS.md          # measured size / speed / accuracy results
 │   ├── COMPLIANCE.md          # per-requirement mapping to the brief
-│   └── BUILD.md  ROADMAP.md   # build record + forward-looking pilot work
+│   └── BUILD.md               # build record
 ├── backend/                   # AWS serverless sync (IaC + Lambdas)
 └── .github/workflows/         # iOS build + simulator demo (cross-platform evidence)
 ```
@@ -148,4 +148,4 @@ in `docs/INTEGRATION.md`.
 - **Cross-platform shells** (`app/android/`, `app/ios/`): Android `minSdkVersion 26`, iOS project, camera permissions and `netraid://` deep links wired on both. The Android app compiles to a real signed standalone APK (models + JS bundled, runs fully offline), verified on a Vivo V2246: genuine aggregate accepted (0.89-0.90), different person rejected (≈ 0.03), full verdict in 371-457 ms. Build record: `docs/BUILD.md`.
 - **Backend** (`backend/`): serverless sync (API Gateway + Lambda + DynamoDB) as IaC.
 
-A per-requirement mapping to the brief is in `docs/COMPLIANCE.md`. The forward-looking pilot work (India-representative recalibration set, on-device latency capture) is tracked in `docs/ROADMAP.md`.
+A per-requirement mapping to the brief is in `docs/COMPLIANCE.md`.

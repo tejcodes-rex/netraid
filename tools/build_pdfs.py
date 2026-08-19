@@ -20,7 +20,7 @@ DIST = ROOT / "dist"
 DIST.mkdir(exist_ok=True)
 
 DOC_ORDER = [
-    ("README.md", ROOT / "README.md"),
+    ("Overview", ROOT / "README.md"),
     ("Architecture", ROOT / "docs/ARCHITECTURE.md"),
     ("Model Pipeline", ROOT / "docs/MODEL_PIPELINE.md"),
     ("Liveness & Anti-Spoofing", ROOT / "docs/LIVENESS.md"),
@@ -45,6 +45,11 @@ h3{font-size:13.5px;margin:14px 0 6px;color:#0C7C49}
 a{color:#0C7C49;text-decoration:none}
 .diagram{margin:14px 0;text-align:center;break-inside:avoid}
 .diagram svg{max-width:100%;height:auto}
+.contents{break-after:page}
+.contents h1{border-bottom:3px solid #1FD27A}
+table.toc{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+table.toc td{padding:9px 4px;border:0;border-bottom:1px solid #E2ECE6}
+table.toc td.pg{text-align:right;width:60px;color:#0C7C49;font-family:'IBM Plex Mono',monospace}
 code{font-family:'IBM Plex Mono',monospace;background:#EAF3EE;padding:1px 5px;border-radius:4px;font-size:10.5px}
 pre{background:#0E1714;color:#E9F1ED;padding:12px 14px;border-radius:8px;font-size:10px;line-height:1.45;white-space:pre-wrap;word-break:break-word;break-inside:avoid}
 tr{break-inside:avoid}
@@ -107,9 +112,54 @@ def render_mermaid(text: str) -> str:
     return MERMAID_RE.sub(one, text)
 
 
+def _render_pdf(html: str, out: Path) -> None:
+    tmp = DIST / "_docs.html"
+    tmp.write_text(html, encoding="utf-8")
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page()
+        pg.goto(tmp.resolve().as_uri(), wait_until="networkidle")
+        pg.wait_for_timeout(1200)
+        pg.pdf(path=str(out), format="A4", print_background=True,
+               margin={"top": "0", "bottom": "0", "left": "0", "right": "0"})
+        b.close()
+    tmp.unlink(missing_ok=True)
+
+
+def _first_headings(paths):
+    """The H1 that opens each source document, which is what a reader looks for."""
+    out = []
+    for title, path in paths:
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("# "):
+                out.append((title, line[2:].strip()))
+                break
+        else:
+            out.append((title, title))
+    return out
+
+
+def _page_numbers(pdf_path, headings):
+    """Find the page each section starts on, by searching the rendered PDF."""
+    import pypdfium2 as pdfium
+    doc = pdfium.PdfDocument(str(pdf_path))
+    pages = {}
+    for i in range(len(doc)):
+        text = " ".join(doc[i].get_textpage().get_text_range().split())
+        for _, h in headings:
+            if h in pages:
+                continue
+            probe = " ".join(h.split())
+            if probe and probe[:38] in text:
+                pages[h] = i + 1
+    return pages
+
+
 def build_docs_pdf():
     md = markdown.Markdown(extensions=["tables", "fenced_code", "toc", "sane_lists"])
-    parts = [COVER]
+    body = []
     for title, path in DOC_ORDER:
         if not path.exists():
             continue
@@ -118,20 +168,27 @@ def build_docs_pdf():
         if "```mermaid" in text:
             print(f"  rendering diagrams in {path.name}")
             text = render_mermaid(text)
-        parts.append(md.convert(text))
-    html = f"<!doctype html><html><head><meta charset='utf-8'><style>{DOC_CSS}</style></head><body>{''.join(parts)}</body></html>"
-    tmp = DIST / "_docs.html"
-    tmp.write_text(html, encoding="utf-8")
-    with sync_playwright() as p:
-        b = p.chromium.launch()
-        pg = b.new_page()
-        pg.goto(tmp.resolve().as_uri(), wait_until="networkidle")
-        pg.wait_for_timeout(1200)
-        pg.pdf(path=str(DIST / "NetraID-Technical-Docs.pdf"),
-               format="A4", print_background=True,
-               margin={"top": "0", "bottom": "0", "left": "0", "right": "0"})
-        b.close()
-    tmp.unlink(missing_ok=True)
+        body.append(md.convert(text))
+    body_html = "".join(body)
+
+    def wrap(contents_html):
+        return (f"<!doctype html><html><head><meta charset='utf-8'><style>{DOC_CSS}</style></head>"
+                f"<body>{COVER}{contents_html}{body_html}</body></html>")
+
+    # 35 pages needs a way in. Rendered twice: once to find where each section
+    # lands, then again with the page numbers filled in.
+    out = DIST / "NetraID-Technical-Docs.pdf"
+    headings = _first_headings(DOC_ORDER)
+    _render_pdf(wrap(""), out)
+    pages = _page_numbers(out, headings)
+
+    rows = []
+    for title, h in headings:
+        n = pages.get(h)
+        rows.append(f"<tr><td>{title}</td><td class='pg'>{n if n else ''}</td></tr>")
+    contents = ("<div class='contents'><h1>Contents</h1><table class='toc'>"
+                + "".join(rows) + "</table></div>")
+    _render_pdf(wrap(contents), out)
     print("wrote dist/NetraID-Technical-Docs.pdf")
 
 

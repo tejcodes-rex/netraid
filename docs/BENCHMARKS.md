@@ -136,7 +136,7 @@ python scripts/03_benchmark.py           # size / accuracy / fidelity / latency
 python scripts/_onnx_int8.py             # int8 accuracy via ONNX Runtime (§1)
 ```
 
-## 6. Limitations and next steps
+## 6. Limitations
 - LFW is the standard academic benchmark but is not India-specific; for deployment we
   recommend a small **India-representative pilot set** to re-calibrate the acceptance
   threshold (currently **0.38** on-device) and the liveness thresholds.

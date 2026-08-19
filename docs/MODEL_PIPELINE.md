@@ -13,7 +13,7 @@ Run order: `01_download_models.py → 02_convert_to_tflite.py → 03_benchmark.p
 | Passive liveness | **MiniFASNet** (Silent-Face) | Apache-2.0 | 0.75 MB |
 
 **Rejected: EdgeFace**, better accuracy/param but **non-commercial weights**, which violates
-the hackathon's "open-source only, no additional licenses" rule. We will not ship it.
+the hackathon's "open-source only, no additional licenses" rule. It is not shipped.
 
 ## 2. Conversion: ONNX → TFLite int8
 We use **onnx2tf** (compiler-free flatbuffer path), it correctly handles the NCHW→NHWC

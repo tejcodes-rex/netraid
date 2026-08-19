@@ -38,6 +38,7 @@ ml/minivision/
 ml/models/
 
 # Working material, not part of the deliverable
+FINAL_MAIL/
 GRAND FINALE/
 deck/
 submission/
@@ -47,6 +48,7 @@ ignore/
 dist/
 docs/DEMO_RUNBOOK.md
 hackathon_doc7.pdf
+docs/ROADMAP.md
 
 # Intermediate artifacts staged for the doc build tools
 build/
